@@ -1,0 +1,10 @@
+# Binaries & packages
+*.apk
+*.aab
+node_modules/
+dist/
+build/
+.next/
+.expo/
+.DS_Store
+Thumbs.db
