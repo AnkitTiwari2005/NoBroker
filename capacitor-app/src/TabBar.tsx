@@ -2,53 +2,84 @@ import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Home, Search, PlusCircle, Heart, User } from 'lucide-react'
 import { useFavorites } from './AppContext'
+import { useAuth } from './AuthContext'
 
 const tabs = [
-  { path: '/', icon: Home, label: 'Home' },
-  { path: '/search', icon: Search, label: 'Search' },
-  { path: '/post', icon: PlusCircle, label: 'Post', special: true },
-  { path: '/favorites', icon: Heart, label: 'Saved' },
-  { path: '/account', icon: User, label: 'Account' },
+  { path: '/',          icon: Home,       label: 'Home',    special: false },
+  { path: '/search',    icon: Search,     label: 'Search',  special: false },
+  { path: '/post',      icon: PlusCircle, label: 'Post',    special: true  },
+  { path: '/favorites', icon: Heart,      label: 'Saved',   special: false },
+  { path: '/account',   icon: User,       label: 'Account', special: false },
 ]
 
 export default function TabBar() {
-  const navigate = useNavigate()
-  const location = useLocation()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const { favorites } = useFavorites()
+  const { user } = useAuth()
+
+  const isActive = (path: string) => {
+    if (path === '/') return location.pathname === '/'
+    return location.pathname.startsWith(path)
+  }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 safe-bottom z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className="flex">
+    <div
+      className="bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+    >
+      <div className="flex items-center">
         {tabs.map(tab => {
-          const isActive = location.pathname === tab.path
-          const Icon = tab.icon
+          const active = isActive(tab.path)
+          const Icon   = tab.icon
+
           return (
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className="flex-1 flex flex-col items-center justify-center py-2 relative active:opacity-70"
+              className={`flex-1 flex flex-col items-center justify-center py-2 relative transition-opacity active:opacity-60`}
             >
               {tab.special ? (
-                <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center mb-0.5 shadow-lg">
-                  <Icon size={24} color="white" />
+                /* Elevated Post button */
+                <div className={`-mt-5 w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
+                  user?.role === 'owner' && user.isVerified
+                    ? 'bg-primary'
+                    : 'bg-slate-400'
+                }`}>
+                  <Icon size={26} color="white" />
                 </div>
               ) : (
-                <Icon
-                  size={22}
-                  color={isActive ? '#1E3A5F' : '#94A3B8'}
-                  fill={isActive && tab.path === '/favorites' ? '#ef4444' : 'none'}
-                  stroke={isActive && tab.path === '/favorites' ? '#ef4444' : isActive ? '#1E3A5F' : '#94A3B8'}
-                />
-              )}
-              {tab.path === '/favorites' && favorites.length > 0 && (
-                <span className="absolute top-1.5 right-1/4 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {favorites.length > 9 ? '9+' : favorites.length}
-                </span>
-              )}
-              {!tab.special && (
-                <span className={`text-xs mt-0.5 ${
-                  isActive ? 'text-primary font-semibold' : 'text-slate-400'
-                }`}>{tab.label}</span>
+                <>
+                  <div className={`relative transition-transform ${active ? 'scale-105' : 'scale-100'}`}>
+                    <Icon
+                      size={22}
+                      color={active ? '#1E3A5F' : '#94A3B8'}
+                      fill={
+                        active && tab.path === '/favorites' ? '#ef4444' :
+                        active ? 'none' : 'none'
+                      }
+                      stroke={
+                        active && tab.path === '/favorites' ? '#ef4444' :
+                        active ? '#1E3A5F' : '#94A3B8'
+                      }
+                    />
+                    {/* Favorites badge */}
+                    {tab.path === '/favorites' && favorites.length > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                        {favorites.length > 9 ? '9+' : favorites.length}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[10px] mt-0.5 font-medium transition-colors ${
+                    active ? 'text-primary' : 'text-slate-400'
+                  }`}>
+                    {tab.label}
+                  </span>
+                  {/* Active dot indicator */}
+                  {active && (
+                    <span className="absolute bottom-1 w-1 h-1 bg-primary rounded-full" />
+                  )}
+                </>
               )}
             </button>
           )

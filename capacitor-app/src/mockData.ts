@@ -21,7 +21,7 @@ export const DEMO_OWNER: User = {
   phone: '+91 99887 76655',
   role: 'owner',
   avatarUrl: null,
-  isVerified: true,
+  isVerified: true, // admin-approved seller
 }
 
 // ─── 20 Realistic Indian Properties ──────────────────────────────────────────
@@ -230,10 +230,11 @@ export const MOCK_PROPERTIES: Property[] = [
     parking: 'covered',
     status: 'featured',
     isVerified: true,
-    coverImageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop',
+    coverImageUrl: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800&auto=format&fit=crop',
     images: [
-      { id: 'img-006-1', url: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop', sortOrder: 0 },
+      { id: 'img-006-1', url: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=800&auto=format&fit=crop', sortOrder: 0 },
       { id: 'img-006-2', url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop', sortOrder: 1 },
+      { id: 'img-006-3', url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop', sortOrder: 2 },
     ],
     amenities: ['gym', 'security', 'lift', 'power_backup', 'intercom'],
     owner: { id: 'owner-006', name: 'Deepak Shah', phone: '+91 98900 77889', isVerified: true, avatarUrl: null },
@@ -563,38 +564,90 @@ export const getSimilarProperties = (property: Property): Property[] => {
     .slice(0, 5)
 }
 
-// Filter properties
+// Filter properties — handles all SearchFilter fields + freeform query
 export const filterProperties = (filters: Record<string, unknown>): Property[] => {
   let results = [...MOCK_PROPERTIES]
-  
-  if (filters.listingType) results = results.filter(p => p.listingType === filters.listingType)
-  if (filters.city) results = results.filter(p => p.city?.toLowerCase().includes((filters.city as string).toLowerCase()))
-  if (filters.q) {
-    const q = (filters.q as string).toLowerCase()
+
+  // listing type
+  if (filters.listingType) {
+    results = results.filter(p => p.listingType === filters.listingType)
+  }
+
+  // city
+  if (filters.city) {
+    results = results.filter(p =>
+      p.city.toLowerCase().includes((filters.city as string).toLowerCase())
+    )
+  }
+
+  // text query (searches title, city, locality, landmark, description)
+  const rawQ = (filters.q || filters.query || '') as string
+  if (rawQ.trim()) {
+    const q = rawQ.trim().toLowerCase()
     results = results.filter(p =>
       p.title.toLowerCase().includes(q) ||
       p.city.toLowerCase().includes(q) ||
       p.locality.toLowerCase().includes(q) ||
-      (p.landmark || '').toLowerCase().includes(q)
+      (p.landmark || '').toLowerCase().includes(q) ||
+      (p.description || '').toLowerCase().includes(q) ||
+      p.propertyType.toLowerCase().includes(q)
     )
   }
+
+  // bedrooms — accepts number[]
   if (filters.bedrooms && (filters.bedrooms as number[]).length > 0) {
     results = results.filter(p => (filters.bedrooms as number[]).includes(p.bedrooms))
   }
+
+  // propertyType — accepts string[]
   if (filters.propertyType && (filters.propertyType as string[]).length > 0) {
-    results = results.filter(p => (filters.propertyType as string[]).includes(p.propertyType))
+    results = results.filter(p =>
+      (filters.propertyType as string[]).includes(p.propertyType)
+    )
   }
+
+  // price range
   if (filters.minPrice) {
+    const min = filters.minPrice as number
     results = results.filter(p => {
-      const price = p.listingType === 'rent' ? (p.monthlyRent || 0) : (p.price || 0)
-      return price >= (filters.minPrice as number)
+      const val = p.listingType === 'rent' ? (p.monthlyRent || 0) : (p.price || 0)
+      return val >= min
     })
   }
   if (filters.maxPrice) {
+    const max = filters.maxPrice as number
     results = results.filter(p => {
-      const price = p.listingType === 'rent' ? (p.monthlyRent || 0) : (p.price || 0)
-      return price <= (filters.maxPrice as number)
+      const val = p.listingType === 'rent' ? (p.monthlyRent || 0) : (p.price || 0)
+      return val <= max
     })
+  }
+
+  // furnishing
+  if (filters.furnishing && (filters.furnishing as string[]).length > 0) {
+    results = results.filter(p =>
+      (filters.furnishing as string[]).includes(p.furnishingStatus)
+    )
+  }
+
+  // sort
+  const sort = filters.sort as string | undefined
+  if (sort === 'price_asc') {
+    results.sort((a, b) => {
+      const aP = a.listingType === 'rent' ? (a.monthlyRent || 0) : (a.price || 0)
+      const bP = b.listingType === 'rent' ? (b.monthlyRent || 0) : (b.price || 0)
+      return aP - bP
+    })
+  } else if (sort === 'price_desc') {
+    results.sort((a, b) => {
+      const aP = a.listingType === 'rent' ? (a.monthlyRent || 0) : (a.price || 0)
+      const bP = b.listingType === 'rent' ? (b.monthlyRent || 0) : (b.price || 0)
+      return bP - aP
+    })
+  } else if (sort === 'area_desc') {
+    results.sort((a, b) => (b.carpetArea || 0) - (a.carpetArea || 0))
+  } else {
+    // default: newest first
+    results.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
   }
 
   return results
@@ -603,9 +656,9 @@ export const filterProperties = (filters: Record<string, unknown>): Property[] =
 // Cities data
 export const CITIES = [
   { name: 'Bangalore', count: 1842, image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=400&auto=format&fit=crop' },
-  { name: 'Mumbai', count: 2341, image: 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=400&auto=format&fit=crop' },
-  { name: 'Delhi', count: 1965, image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&auto=format&fit=crop' },
+  { name: 'Mumbai',    count: 2341, image: 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=400&auto=format&fit=crop' },
+  { name: 'Delhi',     count: 1965, image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&auto=format&fit=crop' },
   { name: 'Hyderabad', count: 1234, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&auto=format&fit=crop' },
-  { name: 'Chennai', count: 987, image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&auto=format&fit=crop' },
-  { name: 'Pune', count: 876, image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&auto=format&fit=crop' },
+  { name: 'Chennai',   count:  987, image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&auto=format&fit=crop' },
+  { name: 'Pune',      count:  876, image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&auto=format&fit=crop' },
 ]

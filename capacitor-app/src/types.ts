@@ -76,4 +76,25 @@ export interface SearchFilters {
   furnishing?: FurnishingStatus[]
   amenities?: string[]
   q?: string
+  sort?: 'newest' | 'price_asc' | 'price_desc' | 'area_desc'
+}
+
+export interface Notification {
+  id: string
+  title: string
+  body: string
+  timestamp: string
+  read: boolean
+  type: 'price_drop' | 'new_listing' | 'verification' | 'general'
+}
+
+export interface ListingDraft {
+  listingType: ListingType | null
+  propertyType: PropertyType | null
+  title: string
+  city: string
+  locality: string
+  price: string
+  description: string
+  images: File[]
 }

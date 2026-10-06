@@ -1,201 +1,394 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react'
-import PropertyCard from '../components/PropertyCard'
-import { filterProperties } from '../mockData'
-import { SearchFilters } from '../types'
+import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Search,
+  SlidersHorizontal,
+  X,
+  ChevronDown,
+  SearchX,
+  MapPin,
+  Bed,
+  Bath,
+  Maximize2
+} from 'lucide-react';
+import { filterProperties, CITIES } from '../mockData';
+import { getDisplayPrice, formatArea, formatPropertyType, formatFurnishing, timeAgo } from '../utils';
+import { SearchFilters, PropertyType, FurnishingStatus, Property } from '../types';
+import { useToast } from '../ToastContext';
 
 export default function SearchPage() {
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [query, setQuery] = useState(searchParams.get('q') || '')
-  const [showFilterSheet, setShowFilterSheet] = useState(false)
-  
-  const [filters, setFilters] = useState<SearchFilters>({
-    listingType: (searchParams.get('listingType') as 'buy' | 'rent') || undefined,
-    city: searchParams.get('city') || undefined,
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const [showSortSheet, setShowSortSheet] = useState(false);
+  const [sortOption, setSortOption] = useState(searchParams.get('sort') || 'newest');
+
+  // Parse filters from URL
+  const initialFilters: SearchFilters = {
+    listingType: (searchParams.get('listingType') as any) || 'rent',
+    city: searchParams.get('city') || '',
     minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
     maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
-    bedrooms: searchParams.get('bedrooms') ? [Number(searchParams.get('bedrooms'))] : undefined,
-  })
+    bedrooms: searchParams.get('bedrooms') ? searchParams.get('bedrooms')?.split(',').map(Number) : undefined,
+    propertyType: searchParams.get('propertyType') ? (searchParams.get('propertyType')?.split(',') as PropertyType[]) : undefined,
+    furnishing: searchParams.get('furnishing') ? (searchParams.get('furnishing')?.split(',') as FurnishingStatus[]) : undefined,
+  };
 
-  const results = filterProperties({ ...filters, query })
-  const activeFilterCount = Object.values(filters).filter(v => v !== undefined).length
+  const [filters, setFilters] = useState<SearchFilters>(initialFilters);
 
-  const handleApplyFilters = () => {
-    setShowFilterSheet(false)
-    const newParams = new URLSearchParams()
-    if (query) newParams.set('q', query)
-    if (filters.listingType) newParams.set('listingType', filters.listingType)
-    if (filters.city) newParams.set('city', filters.city)
-    if (filters.bedrooms) newParams.set('bedrooms', filters.bedrooms.toString())
-    setSearchParams(newParams)
-  }
+  // Local state for filter sheet
+  const [sheetFilters, setSheetFilters] = useState<SearchFilters>(initialFilters);
 
-  const clearFilters = () => {
-    setFilters({})
-    setQuery('')
-    setSearchParams(new URLSearchParams())
-  }
+  useEffect(() => {
+    // Sync filters to URL
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    if (filters.listingType) params.set('listingType', filters.listingType);
+    if (filters.city) params.set('city', filters.city);
+    if (filters.minPrice) params.set('minPrice', filters.minPrice.toString());
+    if (filters.maxPrice) params.set('maxPrice', filters.maxPrice.toString());
+    if (filters.bedrooms?.length) params.set('bedrooms', filters.bedrooms.join(','));
+    if (filters.propertyType?.length) params.set('propertyType', filters.propertyType.join(','));
+    if (filters.furnishing?.length) params.set('furnishing', filters.furnishing.join(','));
+    if (sortOption && sortOption !== 'newest') params.set('sort', sortOption);
+    setSearchParams(params, { replace: true });
+  }, [query, filters, sortOption, setSearchParams]);
 
-  const removeFilter = (key: keyof SearchFilters) => {
-    const newFilters = { ...filters }
-    delete newFilters[key]
-    setFilters(newFilters)
-    
-    const newParams = new URLSearchParams(searchParams)
-    newParams.delete(String(key))
-    setSearchParams(newParams)
-  }
+  const results = useMemo(() => {
+    return filterProperties({ ...filters, q: query, sort: sortOption });
+  }, [filters, query, sortOption]);
+
+  const applyFilters = () => {
+    setFilters(sheetFilters);
+    setShowFilterSheet(false);
+    let count = 0;
+    if (sheetFilters.city) count++;
+    if (sheetFilters.minPrice) count++;
+    if (sheetFilters.maxPrice) count++;
+    if (sheetFilters.bedrooms?.length) count++;
+    if (sheetFilters.propertyType?.length) count++;
+    if (sheetFilters.furnishing?.length) count++;
+    showToast(`${count} filter(s) applied`);
+  };
+
+  const clearAllFilters = () => {
+    const defaultFilters: SearchFilters = { listingType: filters.listingType };
+    setSheetFilters(defaultFilters);
+    setFilters(defaultFilters);
+    setShowFilterSheet(false);
+    setQuery('');
+    showToast('Filters cleared');
+  };
+
+  const removeFilter = (key: keyof SearchFilters, value?: any) => {
+    setFilters(prev => {
+      const updated = { ...prev };
+      if (Array.isArray(updated[key])) {
+        (updated as any)[key] = (updated[key] as any[]).filter(v => v !== value);
+        if ((updated[key] as any[]).length === 0) delete updated[key];
+      } else {
+        delete updated[key];
+      }
+      setSheetFilters(updated);
+      return updated;
+    });
+  };
+
+  const toggleSheetArray = (key: 'bedrooms' | 'propertyType' | 'furnishing', val: any) => {
+    setSheetFilters(prev => {
+      const arr = prev[key] || [];
+      const newArr = (arr as any[]).includes(val) ? (arr as any[]).filter(v => v !== val) : [...arr, val];
+      return { ...prev, [key]: newArr.length > 0 ? newArr : undefined };
+    });
+  };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50">
-      {/* Top bar */}
-      <div className="bg-white px-4 py-3 shadow-sm z-10">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-700 active:bg-slate-100 rounded-full">
-            <ArrowLeft size={24} />
+    <div className="min-h-screen bg-slate-50 flex flex-col page-enter">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-20" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+        <div className="px-4 py-3 flex items-center gap-3">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 btn-press">
+            <ArrowLeft className="w-6 h-6 text-slate-700" />
           </button>
-          
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input 
-              type="text" 
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search locality, landmark..."
+              className="w-full bg-slate-100 rounded-full pl-10 pr-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search by locality, project..."
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+              onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          
-          <button 
-            onClick={() => setShowFilterSheet(true)}
-            className="p-2.5 bg-slate-100 text-slate-700 rounded-xl relative active:bg-slate-200"
-          >
-            <SlidersHorizontal size={20} />
-            {activeFilterCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                {activeFilterCount}
-              </span>
+          <button onClick={() => setShowFilterSheet(true)} className="p-2 rounded-full bg-slate-100 text-slate-700 btn-press relative">
+            <SlidersHorizontal className="w-5 h-5" />
+            {Object.keys(filters).length > 1 && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
             )}
           </button>
         </div>
-
-        {/* Buy/Rent Toggle */}
-        <div className="flex bg-slate-100 p-1 rounded-lg mt-3">
-          <button 
-            onClick={() => setFilters({...filters, listingType: 'buy'})}
-            className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${filters.listingType === 'buy' ? 'bg-white text-primary shadow' : 'text-slate-500'}`}
+        
+        {/* Buy / Rent Toggle */}
+        <div className="flex border-b">
+          <button
+            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${filters.listingType === 'buy' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}
+            onClick={() => { setFilters({ ...filters, listingType: 'buy' }); setSheetFilters({ ...sheetFilters, listingType: 'buy' }); }}
           >
-            BUY
+            Buy
           </button>
-          <button 
-            onClick={() => setFilters({...filters, listingType: 'rent'})}
-            className={`flex-1 py-1.5 text-sm font-semibold rounded-md transition-colors ${filters.listingType === 'rent' ? 'bg-white text-primary shadow' : 'text-slate-500'}`}
+          <button
+            className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${filters.listingType === 'rent' ? 'border-primary text-primary' : 'border-transparent text-slate-500'}`}
+            onClick={() => { setFilters({ ...filters, listingType: 'rent' }); setSheetFilters({ ...sheetFilters, listingType: 'rent' }); }}
           >
-            RENT
+            Rent
           </button>
         </div>
-      </div>
 
-      {/* Results Header */}
-      <div className="px-4 py-3 bg-slate-50 flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-700">
-          {results.length} {results.length === 1 ? 'property' : 'properties'} found
-        </div>
-        <button className="flex items-center gap-1 text-sm text-slate-600 font-medium">
-          Sort <ChevronDown size={14} />
-        </button>
-      </div>
-
-      {/* Active Filters */}
-      {activeFilterCount > 0 && (
-        <div className="px-4 pb-3 flex overflow-x-auto hide-scrollbar gap-2">
+        {/* Filter Chips & Sort */}
+        <div className="px-4 py-2 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <button onClick={() => setShowSortSheet(true)} className="flex items-center gap-1 bg-white border border-slate-200 rounded-full px-3 py-1.5 text-xs font-medium text-slate-700 whitespace-nowrap btn-press">
+            Sort: {sortOption === 'newest' ? 'Newest' : sortOption === 'price_asc' ? 'Price ↑' : sortOption === 'price_desc' ? 'Price ↓' : 'Largest'}
+            <ChevronDown className="w-3 h-3" />
+          </button>
           {filters.city && (
-            <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-3 py-1 rounded-full border border-primary/20 whitespace-nowrap">
-              {filters.city} <X size={12} onClick={() => removeFilter('city')} className="cursor-pointer" />
-            </span>
-          )}
-          {filters.bedrooms && (
-            <span className="flex items-center gap-1 bg-primary/10 text-primary text-xs font-medium px-3 py-1 rounded-full border border-primary/20 whitespace-nowrap">
-              {filters.bedrooms} BHK <X size={12} onClick={() => removeFilter('bedrooms')} className="cursor-pointer" />
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Results List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-24">
-        {results.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            {results.map(prop => (
-              <PropertyCard key={prop.id} property={prop} />
-            ))}
-          </div>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center py-12">
-            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4 text-3xl">
-              🔍
+            <div className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+              {filters.city} <button onClick={() => removeFilter('city')}><X className="w-3 h-3" /></button>
             </div>
-            <h3 className="text-lg font-bold text-slate-800">No properties found</h3>
-            <p className="text-slate-500 text-sm mt-1 text-center max-w-xs">
-              We couldn't find any properties matching your current filters. Try adjusting them.
+          )}
+          {filters.bedrooms?.map(b => (
+            <div key={`bed-${b}`} className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+              {b} BHK <button onClick={() => removeFilter('bedrooms', b)}><X className="w-3 h-3" /></button>
+            </div>
+          ))}
+          {filters.propertyType?.map(pt => (
+            <div key={pt} className="flex items-center gap-1 bg-primary/10 text-primary rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+              {formatPropertyType(pt)} <button onClick={() => removeFilter('propertyType', pt)}><X className="w-3 h-3" /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Results */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+        <div className="mb-4 text-sm font-medium text-slate-600">
+          {results.length} properties found
+        </div>
+        
+        {results.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+              <SearchX className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-800 mb-2">No properties found</h3>
+            <p className="text-slate-500 mb-6 text-sm max-w-[250px]">
+              Try adjusting your filters or searching for a different locality.
             </p>
-            <button onClick={clearFilters} className="mt-6 px-6 py-2.5 bg-primary text-white font-medium rounded-full active:opacity-80">
+            <button onClick={clearAllFilters} className="px-6 py-2 bg-primary text-white font-medium rounded-xl btn-press">
               Clear Filters
             </button>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {results.map((property) => (
+              <Link key={property.id} to={`/property/${property.id}`} className="bg-white rounded-2xl border border-slate-200 overflow-hidden card-press block">
+                <div className="relative h-48">
+                  <img src={property.coverImageUrl || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=800&q=80'} alt={property.title} className="w-full h-full object-cover" />
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur text-slate-800 text-xs font-bold px-2.5 py-1 rounded-lg">
+                    {timeAgo(property.createdAt)}
+                  </div>
+                  {property.isVerified && (
+                    <div className="absolute top-3 right-3 bg-emerald-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow-sm">
+                      Verified
+                    </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-base font-bold text-slate-800 line-clamp-1">{property.title}</h3>
+                  </div>
+                  <div className="flex items-center text-slate-500 text-xs mb-3">
+                    <MapPin className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                    <span className="truncate">{property.locality}, {property.city}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 mb-4">
+                    <div className="flex items-center bg-slate-50 px-2 py-1 rounded-md">
+                      <Bed className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {property.bedrooms} Bed
+                    </div>
+                    <div className="flex items-center bg-slate-50 px-2 py-1 rounded-md">
+                      <Bath className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {property.bathrooms} Bath
+                    </div>
+                    {property.carpetArea && (
+                      <div className="flex items-center bg-slate-50 px-2 py-1 rounded-md">
+                        <Maximize2 className="w-3.5 h-3.5 mr-1.5 text-slate-400" /> {formatArea(property.carpetArea)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-end justify-between mt-2 pt-3 border-t border-slate-100">
+                    <div>
+                      <div className="text-xl font-black text-slate-800">
+                        {getDisplayPrice(property)}
+                      </div>
+                      {property.listingType === 'rent' && property.securityDeposit && (
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          Dep: ₹{property.securityDeposit.toLocaleString('en-IN')}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs font-medium text-primary bg-primary/10 px-3 py-1.5 rounded-lg">
+                      {formatPropertyType(property.propertyType)}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
       </div>
 
-      {/* Filter Bottom Sheet */}
+      {/* Sort Sheet */}
+      {showSortSheet && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowSortSheet(false)} />
+          <div className="relative bg-white rounded-t-3xl p-4 pb-10 sheet-enter">
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
+            <h3 className="text-lg font-bold mb-4 px-2">Sort Properties</h3>
+            <div className="space-y-2">
+              {[
+                { id: 'newest', label: 'Newest First' },
+                { id: 'price_asc', label: 'Price: Low to High' },
+                { id: 'price_desc', label: 'Price: High to Low' },
+                { id: 'area_desc', label: 'Largest Area' },
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => { setSortOption(opt.id); setShowSortSheet(false); showToast('Sorting updated'); }}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl font-medium ${sortOption === opt.id ? 'bg-primary/5 text-primary border border-primary/20' : 'text-slate-700 bg-slate-50 border border-transparent'}`}
+                >
+                  {opt.label}
+                  {sortOption === opt.id && <div className="w-2 h-2 rounded-full bg-primary" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Sheet */}
       {showFilterSheet && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowFilterSheet(false)} />
-          <div className="relative bg-white rounded-t-3xl h-[85vh] flex flex-col overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Filters</h2>
-              <button onClick={() => setShowFilterSheet(false)} className="p-2 -mr-2 text-slate-500 active:bg-slate-100 rounded-full">
-                <X size={20} />
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowFilterSheet(false)} />
+          <div className="relative bg-white rounded-t-3xl flex flex-col h-[85vh] sheet-enter">
+            <div className="p-4 border-b shrink-0 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-800">Filters</h3>
+              <button onClick={() => setShowFilterSheet(false)} className="p-2 -mr-2 text-slate-400 hover:bg-slate-100 rounded-full">
+                <X className="w-5 h-5" />
               </button>
             </div>
             
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+            <div className="flex-1 overflow-y-auto p-5 space-y-6">
               {/* City */}
               <div>
-                <label className="block text-sm font-bold text-slate-800 mb-3">City</label>
-                <input 
-                  type="text"
-                  value={filters.city || ''}
-                  onChange={e => setFilters({...filters, city: e.target.value})}
-                  placeholder="e.g. Bangalore, Mumbai"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-primary"
-                />
+                <label className="block text-sm font-bold text-slate-700 mb-3">City</label>
+                <div className="flex flex-wrap gap-2">
+                  {CITIES.map(city => (
+                    <button
+                      key={city.name}
+                      onClick={() => setSheetFilters({ ...sheetFilters, city: sheetFilters.city === city.name ? '' : city.name })}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border ${sheetFilters.city === city.name ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Bedrooms */}
+              {/* Price Range */}
               <div>
-                <label className="block text-sm font-bold text-slate-800 mb-3">Bedrooms (BHK)</label>
+                <label className="block text-sm font-bold text-slate-700 mb-3">Price Range</label>
+                <div className="flex gap-4 items-center">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500">₹</span>
+                    <input
+                      type="number"
+                      placeholder="Min"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                      value={sheetFilters.minPrice || ''}
+                      onChange={(e) => setSheetFilters({ ...sheetFilters, minPrice: e.target.value ? Number(e.target.value) : undefined })}
+                    />
+                  </div>
+                  <div className="w-4 h-[1px] bg-slate-300" />
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-500">₹</span>
+                    <input
+                      type="number"
+                      placeholder="Max"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-3 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
+                      value={sheetFilters.maxPrice || ''}
+                      onChange={(e) => setSheetFilters({ ...sheetFilters, maxPrice: e.target.value ? Number(e.target.value) : undefined })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* BHK */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-3">BHK Type</label>
                 <div className="flex flex-wrap gap-2">
-                  {[1, 2, 3, 4].map(num => (
+                  {[1, 2, 3, 4].map(b => (
                     <button
-                      key={num}
-                      onClick={() => setFilters({...filters, bedrooms: [num]})}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium border ${filters.bedrooms?.includes(num) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}
+                      key={b}
+                      onClick={() => toggleSheetArray('bedrooms', b)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border ${sheetFilters.bedrooms?.includes(b) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}
                     >
-                      {num} {num === 4 ? '4+ BHK' : 'BHK'}
+                      {b} BHK
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Property Type */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-3">Property Type</label>
+                <div className="flex flex-wrap gap-2">
+                  {['apartment', 'house', 'villa', 'builder_floor', 'studio', 'plot'].map(pt => (
+                    <button
+                      key={pt}
+                      onClick={() => toggleSheetArray('propertyType', pt)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border ${sheetFilters.propertyType?.includes(pt as PropertyType) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}
+                    >
+                      {formatPropertyType(pt as PropertyType)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Furnishing */}
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-3">Furnishing</label>
+                <div className="flex flex-wrap gap-2">
+                  {['unfurnished', 'semi', 'fully'].map(f => (
+                    <button
+                      key={f}
+                      onClick={() => toggleSheetArray('furnishing', f)}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium border ${sheetFilters.furnishing?.includes(f as FurnishingStatus) ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200'}`}
+                    >
+                      {formatFurnishing(f as FurnishingStatus)}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="p-4 border-t border-slate-100 flex gap-4 bg-white">
-              <button onClick={clearFilters} className="flex-1 py-3.5 text-slate-700 font-bold bg-slate-100 rounded-xl active:bg-slate-200">
+            {/* Footer */}
+            <div className="p-4 border-t bg-white shrink-0 grid grid-cols-2 gap-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+              <button onClick={clearAllFilters} className="py-3.5 text-slate-700 font-bold border-2 border-slate-200 rounded-xl btn-press">
                 Clear All
               </button>
-              <button onClick={handleApplyFilters} className="flex-[2] py-3.5 text-white font-bold bg-primary rounded-xl active:opacity-90">
+              <button onClick={applyFilters} className="py-3.5 bg-primary text-white font-bold rounded-xl btn-press">
                 Apply Filters
               </button>
             </div>
@@ -203,5 +396,5 @@ export default function SearchPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

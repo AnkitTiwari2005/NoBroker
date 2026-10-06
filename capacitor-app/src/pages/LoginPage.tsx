@@ -1,124 +1,133 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react'
-import { useAuth } from '../AuthContext'
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { LogIn, Mail, Lock, Eye, EyeOff, AlertCircle, User, Building2 } from 'lucide-react';
+import { useAuth } from '../AuthContext';
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const { login } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPass, setShowPass] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const navigate = useNavigate();
+  const { login } = useAuth();
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email || !password) { setError('Please fill in all fields'); return }
-    setError('')
-    setLoading(true)
-    try {
-      await login(email, password)
-      navigate('/', { replace: true })
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login failed')
-    } finally {
-      setLoading(false)
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!email || !password) {
+      setError('Please enter both email and password');
+      return;
     }
-  }
 
-  const fillDemo = () => { setEmail('demo@nobroker.com'); setPassword('Demo@123') }
+    try {
+      setLoading(true);
+      setError('');
+      await login(email, password);
+      
+      const stored = localStorage.getItem('nobroker_user');
+      const u = stored ? JSON.parse(stored) : null;
+      
+      if (u?.role === 'admin') navigate('/admin', { replace: true });
+      else navigate('/', { replace: true });
+    } catch (err: any) {
+      setError(err.message || 'Failed to login');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="h-full bg-white flex flex-col">
-      {/* Top gradient */}
-      <div className="bg-gradient-to-b from-primary to-primary-light px-6 pt-16 pb-12 flex flex-col items-center">
-        <div className="text-white text-3xl font-extrabold tracking-tight">NoBroker</div>
-        <div className="text-blue-200 text-sm mt-1">Find your perfect home</div>
-      </div>
+    <div className="min-h-screen bg-white flex flex-col page-enter" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex-1 flex flex-col px-6 py-10 overflow-y-auto">
+        <div className="mb-10 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4 shadow-lg shadow-primary/30">
+            <Building2 className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Welcome Back</h1>
+          <p className="text-slate-500 font-medium">Sign in to continue to NoBroker</p>
+        </div>
 
-      {/* Form card */}
-      <div className="flex-1 -mt-6 bg-white rounded-t-3xl px-6 pt-8 overflow-y-auto">
-        <h2 className="text-2xl font-bold text-slate-900">Welcome back</h2>
-        <p className="text-slate-500 text-sm mt-1">Sign in to continue</p>
+        <div className="mb-8 flex gap-3">
+          <button 
+            onClick={() => { setEmail('demo@nobroker.com'); setPassword('password'); }}
+            className="flex-1 bg-blue-50 border border-blue-100 p-3 rounded-xl flex flex-col items-center btn-press"
+          >
+            <User className="w-6 h-6 text-blue-600 mb-1" />
+            <span className="text-xs font-bold text-slate-700">Seeker Demo</span>
+          </button>
+          <button 
+            onClick={() => { setEmail('owner@nobroker.com'); setPassword('password'); }}
+            className="flex-1 bg-amber-50 border border-amber-100 p-3 rounded-xl flex flex-col items-center btn-press"
+          >
+            <Building2 className="w-6 h-6 text-amber-600 mb-1" />
+            <span className="text-xs font-bold text-slate-700">Owner Demo</span>
+          </button>
+        </div>
 
-        {/* Demo hint */}
-        <button
-          onClick={fillDemo}
-          className="mt-4 w-full border-2 border-dashed border-amber-300 bg-amber-50 rounded-xl p-3 text-left"
-        >
-          <div className="text-amber-700 text-xs font-semibold">🧪 Demo Credentials</div>
-          <div className="text-amber-600 text-xs mt-0.5">Email: demo@nobroker.com | Password: Demo@123</div>
-          <div className="text-amber-500 text-xs">Tap to auto-fill →</div>
-        </button>
+        <form onSubmit={handleLogin} className="space-y-5">
+          {error && (
+            <div className="p-4 bg-red-50 text-red-600 text-sm font-semibold rounded-xl flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              {error}
+            </div>
+          )}
 
-        <form onSubmit={handleLogin} className="mt-6 space-y-4">
-          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+            <label className="block text-sm font-bold text-slate-700 mb-1.5">Email Address</label>
             <div className="relative">
-              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-3.5 text-slate-900 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                placeholder="name@example.com"
               />
             </div>
           </div>
 
-          {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+            <label className="block text-sm font-bold text-slate-700 mb-1.5">Password</label>
             <div className="relative">
-              <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
-                type={showPass ? 'text' : 'password'}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Min. 6 characters"
-                className="w-full pl-10 pr-12 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-12 py-3.5 text-slate-900 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                placeholder="••••••••"
               />
-              <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
           </div>
 
-          {/* Error */}
-          {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-3">
-              <AlertCircle size={16} />{error}
-            </div>
-          )}
-
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary text-white py-3.5 rounded-xl font-semibold text-base disabled:opacity-60 active:opacity-80"
+            className="w-full py-4 bg-primary text-white rounded-xl font-bold text-lg mt-2 flex items-center justify-center btn-press disabled:opacity-70 disabled:active:scale-100 shadow-[0_4px_14px_rgba(30,58,95,0.2)]"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? (
+              <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
 
-        <div className="flex items-center gap-3 my-6">
-          <div className="flex-1 h-px bg-slate-200" />
-          <span className="text-slate-400 text-xs">OR</span>
-          <div className="flex-1 h-px bg-slate-200" />
+        <div className="mt-8 text-center text-sm font-medium text-slate-500">
+          Don't have an account?{' '}
+          <Link to="/register" className="text-primary font-bold hover:underline">
+            Register here
+          </Link>
         </div>
-
-        <p className="text-center text-sm text-slate-600">
-          New here?{' '}
-          <Link to="/register" className="text-primary font-semibold">Create account</Link>
-        </p>
-
-        <p className="text-center text-xs text-slate-400 mt-6 pb-8">
-          By continuing, you agree to our Terms of Service & Privacy Policy
-        </p>
       </div>
     </div>
-  )
+  );
 }

@@ -3,26 +3,170 @@
 @tailwind utilities;
 
 @layer base {
-  html, body, #root { height: 100%; overflow: hidden; }
-  * { -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F8FAFC; overscroll-behavior: none; }
-  #root { display: flex; flex-direction: column; }
-  input, textarea, select { -webkit-user-select: text; user-select: text; }
+  /* Use dynamic viewport height so nav/status bars are handled correctly */
+  html {
+    height: 100%;
+    height: 100dvh;
+  }
+  body {
+    height: 100%;
+    height: 100dvh;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+    background: #F8FAFC;
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  #root {
+    height: 100%;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    box-sizing: border-box;
+  }
+  input, textarea, select {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 @layer utilities {
+  /* Safe area utilities — respects iPhone notch, Android status bar, home indicator */
+  .pt-safe   { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe   { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pl-safe   { padding-left: env(safe-area-inset-left, 0px); }
+  .pr-safe   { padding-right: env(safe-area-inset-right, 0px); }
+  .mt-safe   { margin-top: env(safe-area-inset-top, 0px); }
+  .mb-safe   { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+  /* Scrollbar hide */
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
-  .safe-top { padding-top: env(safe-area-inset-top); }
-  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 }
 
-.sheet-enter { animation: sheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
-@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+/* ── Page / Screen Transitions ───────────────────────────────────────────── */
+.page-enter {
+  animation: pageSlideUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+.page-fade {
+  animation: pageFade 0.22s ease both;
+}
+@keyframes pageSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pageFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
+/* ── Bottom Sheet ────────────────────────────────────────────────────────── */
+.sheet-enter {
+  animation: sheetUp 0.32s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0.6; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Card press ──────────────────────────────────────────────────────────── */
+.card-press {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.card-press:active {
+  transform: scale(0.97);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+/* ── Button press ────────────────────────────────────────────────────────── */
+.btn-press {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.btn-press:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+/* ── Fade slide in (staggered cards) ─────────────────────────────────────── */
+.animate-fade-in {
+  animation: pageFade 0.3s ease both;
+}
+.animate-slide-up {
+  animation: sheetUp 0.3s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+/* ── Shimmer skeleton ────────────────────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Splash logo pulse ───────────────────────────────────────────────────── */
+@keyframes splashPulse {
+  0%   { transform: scale(0.8); opacity: 0; }
+  60%  { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.splash-logo {
+  animation: splashPulse 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes splashTagline {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.splash-tagline {
+  animation: splashTagline 0.5s 0.5s ease both;
+}
+@keyframes splashProgress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.splash-progress {
+  transform-origin: left;
+  animation: splashProgress 1.8s 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Onboarding slide ────────────────────────────────────────────────────── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ── Toast notification ──────────────────────────────────────────────────── */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-20px) scale(0.95); }
+}
+.toast-in  { animation: toastIn  0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.toast-out { animation: toastOut 0.2s ease both; }
+
+/* ── Gallery swipe transition ────────────────────────────────────────────── */
+.gallery-img {
+  transition: opacity 0.2s ease;
+}
+
+/* ── Image gallery dot ───────────────────────────────────────────────────── */
+.gallery-dot {
+  transition: width 0.2s ease, opacity 0.2s ease;
+}

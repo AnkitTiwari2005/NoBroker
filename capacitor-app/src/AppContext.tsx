@@ -1,6 +1,7 @@
-import React, { useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { Property } from './types'
 
+// ─── Favorites ────────────────────────────────────────────────────────────────
 interface FavoritesContextType {
   favoriteIds: Set<string>
   favorites: Property[]
@@ -8,16 +9,17 @@ interface FavoritesContextType {
   isFavorited: (id: string) => boolean
 }
 
+// ─── Compare ──────────────────────────────────────────────────────────────────
 interface CompareContextType {
   compareList: Property[]
-  addToCompare: (p: Property) => boolean
+  addToCompare: (p: Property) => 'added' | 'already' | 'full'
   removeFromCompare: (id: string) => void
   clearCompare: () => void
   isInCompare: (id: string) => boolean
 }
 
-export const FavoritesContext = React.createContext<FavoritesContextType | null>(null)
-export const CompareContext = React.createContext<CompareContextType | null>(null)
+export const FavoritesContext = createContext<FavoritesContextType | null>(null)
+export const CompareContext    = createContext<CompareContextType | null>(null)
 
 const FAVS_KEY = 'nobroker_favorites'
 
@@ -50,16 +52,16 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
 export function CompareProvider({ children }: { children: ReactNode }) {
   const [compareList, setCompareList] = useState<Property[]>([])
 
-  const addToCompare = (p: Property): boolean => {
-    if (compareList.length >= 3) return false
-    if (compareList.find(x => x.id === p.id)) return true
+  const addToCompare = (p: Property): 'added' | 'already' | 'full' => {
+    if (compareList.find(x => x.id === p.id)) return 'already'
+    if (compareList.length >= 3) return 'full'
     setCompareList(prev => [...prev, p])
-    return true
+    return 'added'
   }
 
   const removeFromCompare = (id: string) => setCompareList(prev => prev.filter(p => p.id !== id))
   const clearCompare = () => setCompareList([])
-  const isInCompare = (id: string) => compareList.some(p => p.id === id)
+  const isInCompare  = (id: string) => compareList.some(p => p.id === id)
 
   return (
     <CompareContext.Provider value={{ compareList, addToCompare, removeFromCompare, clearCompare, isInCompare }}>
@@ -69,13 +71,13 @@ export function CompareProvider({ children }: { children: ReactNode }) {
 }
 
 export function useFavorites() {
-  const ctx = React.useContext(FavoritesContext)
+  const ctx = useContext(FavoritesContext)
   if (!ctx) throw new Error('useFavorites must be used within FavoritesProvider')
   return ctx
 }
 
 export function useCompare() {
-  const ctx = React.useContext(CompareContext)
+  const ctx = useContext(CompareContext)
   if (!ctx) throw new Error('useCompare must be used within CompareProvider')
   return ctx
 }
