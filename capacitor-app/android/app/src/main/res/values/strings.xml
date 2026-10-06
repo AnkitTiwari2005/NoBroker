@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NoBroker</string>
+    <string name="title_activity_main">NoBroker</string>
+    <string name="package_name">com.nobroker.app</string>
+    <string name="custom_url_scheme">com.nobroker.app</string>
+</resources>
