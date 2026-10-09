@@ -54,15 +54,13 @@
 }
 
 /* ── Page / Screen Transitions ───────────────────────────────────────────── */
+/* NOTE: Do NOT use transform here — transform creates a CSS stacking context
+   which breaks position:fixed children (modals, sheets, overlays). Use opacity only. */
 .page-enter {
-  animation: pageSlideUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: pageFade 0.22s ease both;
 }
 .page-fade {
   animation: pageFade 0.22s ease both;
-}
-@keyframes pageSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes pageFade {
   from { opacity: 0; }

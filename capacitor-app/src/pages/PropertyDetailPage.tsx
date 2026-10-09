@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Heart, Share2, MapPin, Bed, Bath, Maximize2, Building,
@@ -9,6 +10,7 @@ import { MOCK_PROPERTIES } from '../mockData';
 import { getDisplayPrice, formatArea, formatPropertyType, formatFurnishing, timeAgo } from '../utils';
 import { useToast } from '../ToastContext';
 import { useFavorites, useCompare } from '../AppContext';
+import ModalSheet from '../components/ModalSheet';
 
 const AMENITY_ICONS: Record<string, any> = {
   gym: Dumbbell, pool: Waves, security: Shield, lift: Building,
@@ -80,7 +82,7 @@ export default function PropertyDetailPage() {
   ).slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24 page-enter">
+    <div className="min-h-screen bg-slate-50 page-enter" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)' }}>
       {/* Gallery */}
       <div className="relative h-72 sm:h-96 bg-black" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {images.map((img, idx) => (
@@ -300,50 +302,65 @@ export default function PropertyDetailPage() {
         </div>
       )}
 
-      {/* Fixed Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-3 flex gap-3 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}>
-        <button onClick={handleCompare} className="w-12 h-12 rounded-xl border-2 border-slate-200 flex items-center justify-center text-slate-600 btn-press">
-          <Scale className="w-5 h-5" />
-        </button>
-        <button onClick={() => toggleFavorite(property)} className="w-12 h-12 rounded-xl border-2 border-slate-200 flex items-center justify-center text-slate-600 btn-press">
-          <Heart className={`w-5 h-5 ${isFavorited(property.id) ? 'fill-red-500 text-red-500' : ''}`} />
-        </button>
-        <button onClick={() => setShowContactSheet(true)} className="flex-1 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center btn-press">
-          Contact Owner
-        </button>
-      </div>
+      {/* Contact bar — rendered via portal so it sits above TabBar */}
+      {ReactDOM.createPortal(
+        <div
+          className="fixed left-0 right-0 bg-white border-t border-slate-100 flex gap-3 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
+            pointerEvents: 'auto',
+          }}
+        >
+          <button onClick={handleCompare} className="w-12 h-12 rounded-xl border-2 border-slate-200 flex items-center justify-center text-slate-600 btn-press active:bg-slate-50">
+            <Scale className="w-5 h-5" />
+          </button>
+          <button onClick={() => toggleFavorite(property)} className="w-12 h-12 rounded-xl border-2 border-slate-200 flex items-center justify-center btn-press active:bg-red-50">
+            <Heart className={`w-5 h-5 ${isFavorited(property.id) ? 'fill-red-500 text-red-500' : 'text-slate-600'}`} />
+          </button>
+          <button
+            onClick={() => setShowContactSheet(true)}
+            className="flex-1 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 btn-press"
+          >
+            <Phone className="w-4 h-4" />
+            Contact Owner
+          </button>
+        </div>,
+        document.getElementById('modal-root')!
+      )}
 
-      {/* Contact Sheet */}
+      {/* Contact Sheet via portal */}
       {showContactSheet && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowContactSheet(false)} />
-          <div className="relative bg-white rounded-t-3xl p-5 pb-10 sheet-enter">
-            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Contact {property.owner?.name}</h3>
-            <p className="text-sm text-slate-500 mb-6">Choose how you would like to connect with the owner.</p>
-            
-            <div className="space-y-3">
-              <a href={`tel:+91${cleanPhone}`} className="flex items-center p-4 bg-slate-50 border border-slate-200 rounded-2xl btn-press">
-                <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-4">
-                  <Phone className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-bold text-slate-800">Call Now</div>
-                  <div className="text-sm text-slate-500">+91 {cleanPhone}</div>
-                </div>
-              </a>
-              <a href={`https://wa.me/91${cleanPhone}?text=Hi, I am interested in your property: ${property.title}`} target="_blank" rel="noreferrer" className="flex items-center p-4 bg-emerald-50 border border-emerald-100 rounded-2xl btn-press">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mr-4">
-                  <MessageCircle className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="font-bold text-emerald-900">WhatsApp</div>
-                  <div className="text-sm text-emerald-700">Chat with owner</div>
-                </div>
-              </a>
-            </div>
+        <ModalSheet onClose={() => setShowContactSheet(false)} title={`Contact ${property.owner?.name || 'Owner'}`} showClose>
+          <div className="px-5 pb-4 space-y-3">
+            <p className="text-sm text-slate-500 -mt-1 mb-4">Choose how you'd like to connect with the owner.</p>
+            <a
+              href={`tel:+91${cleanPhone}`}
+              className="flex items-center p-4 bg-slate-50 border border-slate-200 rounded-2xl btn-press"
+            >
+              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mr-4">
+                <Phone className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-bold text-slate-800">Call Now</div>
+                <div className="text-sm text-slate-500">+91 {cleanPhone}</div>
+              </div>
+            </a>
+            <a
+              href={`https://wa.me/91${cleanPhone}?text=Hi, I am interested in your property: ${encodeURIComponent(property.title)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center p-4 bg-emerald-50 border border-emerald-100 rounded-2xl btn-press"
+            >
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mr-4">
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-bold text-emerald-900">WhatsApp</div>
+                <div className="text-sm text-emerald-700">Chat with owner directly</div>
+              </div>
+            </a>
           </div>
-        </div>
+        </ModalSheet>
       )}
     </div>
   );

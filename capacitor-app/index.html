@@ -10,6 +10,8 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Portal root for modals/sheets — renders outside scroll containers to avoid z-index stacking context bugs -->
+    <div id="modal-root" style="position:fixed;inset:0;pointer-events:none;z-index:9000"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,160 +1,292 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Bell, Building2, Home, Sofa, Map, Search, ChevronRight } from 'lucide-react';
-import { useAuth } from '../AuthContext';
-import { FEATURED_PROPERTIES, CITIES, MOCK_PROPERTIES } from '../mockData';
-import PropertyCard from '../components/PropertyCard';
+import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Bell, Building2, Home, Sofa, Map, Search, ChevronRight,
+  MapPin, TrendingUp, Star, X, ArrowRight
+} from 'lucide-react'
+import { useAuth } from '../AuthContext'
+import { FEATURED_PROPERTIES, CITIES, MOCK_PROPERTIES } from '../mockData'
+import PropertyCard from '../components/PropertyCard'
+import ModalSheet from '../components/ModalSheet'
 
 export default function HomePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [listingType, setListingType] = useState<'buy' | 'rent'>('rent');
-  const [showNotifications, setShowNotifications] = useState(false);
+  const navigate  = useNavigate()
+  const { user }  = useAuth()
+
+  const [listingType,       setListingType]       = useState<'buy' | 'rent'>('rent')
+  const [searchQuery,       setSearchQuery]       = useState('')
+  const [showSuggestions,   setShowSuggestions]   = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   // Mock notifications
-  const unreadCount = 2;
   const notifications = [
-    { id: 1, title: 'New property match', body: 'A new 2BHK in Indiranagar matches your search.', time: '2 hours ago' },
-    { id: 2, title: 'Price dropped', body: 'Price dropped for Modern Apartment.', time: '1 day ago' },
-  ];
+    { id: 1, icon: TrendingUp, color: 'blue',  title: 'New property match',   body: 'A new 2 BHK in Indiranagar matches your search.',    time: '2 hours ago' },
+    { id: 2, icon: Star,       color: 'amber', title: 'Price dropped',         body: 'Price reduced on Sea-View 2 BHK in Bandra.',           time: '1 day ago'  },
+    { id: 3, icon: Bell,       color: 'green', title: 'Listing verified',      body: 'A property you saved has been admin-verified.',         time: '2 days ago' },
+  ]
 
-  const handleListingTypeToggle = (type: 'buy' | 'rent') => {
-    setListingType(type);
-    navigate(`/search?listingType=${type}`);
-  };
+  // Real-time search suggestions from mock data
+  const suggestions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return []
+    const results: Array<{ label: string; sub: string; icon: any; path: string }> = []
 
-  const handleSearchClick = () => {
-    navigate(`/search?listingType=${listingType}`);
-  };
+    // City matches
+    CITIES.filter(c => c.name.toLowerCase().includes(q)).forEach(c =>
+      results.push({ label: c.name, sub: `${c.count} properties`, icon: MapPin, path: `/search?city=${c.name}&listingType=${listingType}` })
+    )
+
+    // Locality matches
+    const seen = new Set<string>()
+    MOCK_PROPERTIES
+      .filter(p => p.locality.toLowerCase().includes(q) && !seen.has(p.locality))
+      .slice(0, 4)
+      .forEach(p => {
+        seen.add(p.locality)
+        results.push({ label: p.locality, sub: p.city, icon: MapPin, path: `/search?q=${encodeURIComponent(p.locality)}&listingType=${listingType}` })
+      })
+
+    // Property title matches
+    MOCK_PROPERTIES
+      .filter(p => p.title.toLowerCase().includes(q))
+      .slice(0, 2)
+      .forEach(p =>
+        results.push({ label: p.title, sub: `${p.locality}, ${p.city}`, icon: Building2, path: `/property/${p.id}` })
+      )
+
+    return results.slice(0, 6)
+  }, [searchQuery, listingType])
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      setShowSuggestions(false)
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}&listingType=${listingType}`)
+    } else {
+      navigate(`/search?listingType=${listingType}`)
+    }
+  }
+
+  const handleSuggestionClick = (path: string) => {
+    setShowSuggestions(false)
+    setSearchQuery('')
+    navigate(path)
+  }
+
+  const handleBhkChip = (n: number) =>
+    navigate(`/search?bedrooms=${n}&listingType=${listingType}`)
+
+  const handleTypeChip = (type: string) =>
+    navigate(`/search?propertyType=${type}&listingType=${listingType}`)
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24 page-enter">
-      {/* Header */}
-      <div className="bg-[#1E3A5F] text-white pt-safe" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-        <div className="px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">NoBroker</h1>
-          <button onClick={() => setShowNotifications(true)} className="relative p-2 btn-press">
-            <Bell className={`w-6 h-6 ${unreadCount > 0 ? 'text-amber-500' : 'text-white'}`} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#1E3A5F]" />
-            )}
+    <div className="min-h-screen bg-gray-50 pb-28 page-enter">
+
+      {/* ── Header ───────────────────────────────────────────────────────── */}
+      <div
+        className="bg-[#1E3A5F] text-white"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
+        <div className="px-4 pt-4 pb-2 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight">NoBroker</h1>
+            <p className="text-white/60 text-xs mt-0.5">Zero Brokerage • Real Homes</p>
+          </div>
+          <button
+            onClick={() => setShowNotifications(true)}
+            className="relative p-2 btn-press"
+          >
+            <Bell size={24} className="text-amber-400" strokeWidth={2} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-[#1E3A5F]" />
           </button>
         </div>
 
-        {/* Hero Section */}
-        <div className="px-4 pb-8 pt-2">
-          <div className="flex bg-white/10 rounded-lg p-1 mb-6">
+        {/* Buy / Rent toggle */}
+        <div className="px-4 pb-3">
+          <div className="flex bg-white/10 rounded-xl p-1">
+            {(['rent', 'buy'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setListingType(t)}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all btn-press ${
+                  listingType === t ? 'bg-white text-[#1E3A5F] shadow-sm' : 'text-white/70'
+                }`}
+              >
+                {t.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Inline Search Bar ─────────────────────────────────────────── */}
+        <div className="px-4 pb-8 relative">
+          <div className="bg-white rounded-2xl shadow-xl flex items-center pr-2 pl-4">
+            <Search size={18} className="text-slate-400 mr-3 shrink-0" />
+            <input
+              ref={searchRef}
+              type="text"
+              placeholder={`Search in ${user ? 'your city' : 'Bangalore'}...`}
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setShowSuggestions(true) }}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              onKeyDown={e => e.key === 'Enter' && handleSearchSubmit()}
+              className="flex-1 py-3.5 text-sm text-slate-800 placeholder-slate-400 bg-transparent outline-none"
+            />
+            {searchQuery ? (
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { setSearchQuery(''); searchRef.current?.focus() }}
+                className="p-1.5 text-slate-400 btn-press"
+              >
+                <X size={16} />
+              </button>
+            ) : null}
             <button
-              onClick={() => handleListingTypeToggle('rent')}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-colors btn-press ${listingType === 'rent' ? 'bg-white text-[#1E3A5F]' : 'text-white/80'}`}
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleSearchSubmit}
+              className="ml-1 bg-[#1E3A5F] text-white p-2.5 rounded-xl btn-press"
             >
-              RENT
-            </button>
-            <button
-              onClick={() => handleListingTypeToggle('buy')}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-colors btn-press ${listingType === 'buy' ? 'bg-white text-[#1E3A5F]' : 'text-white/80'}`}
-            >
-              BUY
+              <Search size={16} />
             </button>
           </div>
 
-          <button onClick={handleSearchClick} className="w-full bg-white text-gray-500 p-4 rounded-xl shadow-lg flex items-center justify-between btn-press">
-            <div className="flex items-center">
-              <Search className="w-5 h-5 mr-3 text-gray-400" />
-              <span>Search in Bangalore...</span>
+          {/* Suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-4 right-4 top-full -mt-4 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-10">
+              {suggestions.map((s, i) => {
+                const Icon = s.icon
+                return (
+                  <button
+                    key={i}
+                    onMouseDown={e => e.preventDefault()}
+                    onClick={() => handleSuggestionClick(s.path)}
+                    className="w-full flex items-center px-4 py-3 hover:bg-slate-50 active:bg-slate-100 border-b border-slate-50 last:border-0 text-left btn-press"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3 shrink-0">
+                      <Icon size={15} className="text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{s.label}</p>
+                      <p className="text-xs text-slate-400">{s.sub}</p>
+                    </div>
+                    <ArrowRight size={14} className="text-slate-300 shrink-0" />
+                  </button>
+                )
+              })}
             </div>
-            <div className="bg-[#1E3A5F] text-white p-2 rounded-lg">
-              <Search className="w-4 h-4" />
-            </div>
-          </button>
+          )}
         </div>
       </div>
 
-      <div className="px-4 -mt-4">
-        {/* Quick Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex overflow-x-auto space-x-3 scrollbar-hide pb-2">
-          {['1 BHK', '2 BHK', '3 BHK'].map(bhk => (
-            <button key={bhk} onClick={() => navigate(`/search?bedrooms=${bhk.charAt(0)}&listingType=${listingType}`)} className="flex-shrink-0 border border-gray-200 rounded-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 btn-press card-press">
-              {bhk}
+      {/* ── Quick filter chips ───────────────────────────────────────────── */}
+      <div className="px-4 -mt-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-3 flex overflow-x-auto gap-2 scrollbar-hide">
+          {[1, 2, 3, 4].map(n => (
+            <button
+              key={n}
+              onClick={() => handleBhkChip(n)}
+              className="flex-shrink-0 border border-slate-200 rounded-full px-4 py-1.5 text-sm font-semibold text-slate-700 bg-slate-50 btn-press hover:bg-primary hover:text-white hover:border-primary transition-colors"
+            >
+              {n} BHK
             </button>
           ))}
-          <div className="w-px h-8 bg-gray-200 mx-1 self-center" />
+          <div className="w-px h-6 bg-slate-200 self-center mx-1" />
           {[
-            { label: 'Villa', icon: Home, type: 'villa' },
-            { label: 'Studio', icon: Sofa, type: 'studio' },
-            { label: 'Plot', icon: Map, type: 'plot' },
+            { label: 'Villa',   icon: Home,     type: 'villa'   },
+            { label: 'Studio',  icon: Sofa,     type: 'studio'  },
+            { label: 'Plot',    icon: Map,      type: 'plot'    },
           ].map(pt => (
-            <button key={pt.type} onClick={() => navigate(`/search?propertyType=${pt.type}`)} className="flex-shrink-0 flex items-center border border-gray-200 rounded-full px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 btn-press card-press">
-              <pt.icon className="w-4 h-4 mr-2 text-gray-500" />
+            <button
+              key={pt.type}
+              onClick={() => handleTypeChip(pt.type)}
+              className="flex-shrink-0 flex items-center gap-1.5 border border-slate-200 rounded-full px-4 py-1.5 text-sm font-semibold text-slate-700 bg-slate-50 btn-press hover:bg-primary hover:text-white hover:border-primary transition-colors"
+            >
+              <pt.icon size={13} />
               {pt.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Featured Properties Horizontal Scroll */}
+      {/* ── Featured Properties ──────────────────────────────────────────── */}
       <div className="mb-8 pl-4">
         <div className="flex justify-between items-center pr-4 mb-4">
-          <h2 className="text-lg font-bold text-gray-800">Featured Properties</h2>
-          <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary btn-press">View All</button>
+          <h2 className="text-lg font-bold text-slate-800">Featured Properties</h2>
+          <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary btn-press flex items-center gap-1">
+            View All <ChevronRight size={16} />
+          </button>
         </div>
-        <div className="flex overflow-x-auto space-x-4 pb-4 pr-4 scrollbar-hide">
+        <div className="flex overflow-x-auto gap-4 pb-2 pr-4 scrollbar-hide">
           {FEATURED_PROPERTIES.map(prop => (
-            <div key={prop.id} className="w-72 flex-shrink-0 card-press">
+            <div key={prop.id} className="w-72 shrink-0 card-press">
               <PropertyCard property={prop} compact />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Browse by City */}
+      {/* ── Browse by City ───────────────────────────────────────────────── */}
       <div className="px-4 mb-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Browse by City</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <h2 className="text-lg font-bold text-slate-800 mb-4">Browse by City</h2>
+        <div className="grid grid-cols-2 gap-3">
           {CITIES.slice(0, 4).map(city => (
-            <button key={city.name} onClick={() => navigate(`/search?city=${city.name}`)} className="relative h-24 rounded-xl overflow-hidden btn-press card-press">
-              <img src={city.image} alt={city.name} className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/40" />
-              <div className="absolute inset-0 flex flex-col justify-center items-center text-white">
-                <span className="font-bold">{city.name}</span>
-                <span className="text-xs text-white/80">{city.count} properties</span>
+            <button
+              key={city.name}
+              onClick={() => navigate(`/search?city=${city.name}&listingType=${listingType}`)}
+              className="relative h-28 rounded-2xl overflow-hidden btn-press card-press"
+            >
+              <img
+                src={city.image}
+                alt={city.name}
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-3 text-white text-left">
+                <p className="font-bold text-base leading-tight">{city.name}</p>
+                <p className="text-xs text-white/70">{city.count.toLocaleString('en-IN')} properties</p>
               </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Property Types */}
+      {/* ── Property Types ───────────────────────────────────────────────── */}
       <div className="pl-4 mb-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Property Types</h2>
-        <div className="flex overflow-x-auto space-x-4 pb-2 pr-4 scrollbar-hide">
+        <h2 className="text-lg font-bold text-slate-800 mb-4">Property Types</h2>
+        <div className="flex overflow-x-auto gap-4 pb-2 pr-4 scrollbar-hide">
           {[
-            { type: 'Apartment', icon: Building2 },
-            { type: 'Villa', icon: Home },
-            { type: 'House', icon: Home },
-            { type: 'Studio', icon: Sofa },
-            { type: 'Plot', icon: Map },
+            { type: 'apartment', label: 'Apartment', icon: Building2 },
+            { type: 'villa',     label: 'Villa',     icon: Home      },
+            { type: 'house',     label: 'House',     icon: Home      },
+            { type: 'studio',    label: 'Studio',    icon: Sofa      },
+            { type: 'plot',      label: 'Plot',      icon: Map       },
           ].map(pt => (
-            <button key={pt.type} onClick={() => navigate(`/search?propertyType=${pt.type.toLowerCase()}`)} className="flex-shrink-0 flex flex-col items-center btn-press card-press">
-              <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-2 border border-gray-100">
-                <pt.icon className="w-8 h-8 text-[#1E3A5F]" />
+            <button
+              key={pt.type}
+              onClick={() => handleTypeChip(pt.type)}
+              className="shrink-0 flex flex-col items-center btn-press card-press"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-white shadow-sm border border-slate-100 flex items-center justify-center mb-2 hover:bg-primary hover:border-primary group transition-colors">
+                <pt.icon size={28} className="text-primary group-hover:text-white transition-colors" />
               </div>
-              <span className="text-xs font-medium text-gray-700">{pt.type}</span>
+              <span className="text-xs font-semibold text-slate-600">{pt.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Latest Properties */}
-      <div className="px-4 mb-8">
+      {/* ── Latest Properties ────────────────────────────────────────────── */}
+      <div className="px-4 mb-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-800">Latest Properties</h2>
-          <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary btn-press flex items-center">
-            View All <ChevronRight className="w-4 h-4" />
+          <h2 className="text-lg font-bold text-slate-800">Latest Properties</h2>
+          <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary btn-press flex items-center gap-1">
+            View All <ChevronRight size={16} />
           </button>
         </div>
         <div className="space-y-4">
-          {MOCK_PROPERTIES.slice(0, 3).map(prop => (
+          {MOCK_PROPERTIES.slice(0, 4).map(prop => (
             <div key={prop.id} className="card-press">
               <PropertyCard property={prop} />
             </div>
@@ -162,33 +294,44 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Notifications Bottom Sheet */}
+      {/* ── Notifications Sheet (portal) ─────────────────────────────────── */}
       {showNotifications && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setShowNotifications(false)} />
-          <div className="bg-white rounded-t-2xl p-4 sheet-enter relative z-10 max-h-[80vh] flex flex-col">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-bold">Notifications</h2>
-              <button onClick={() => setShowNotifications(false)} className="text-primary text-sm font-medium btn-press">Mark all read</button>
+        <ModalSheet onClose={() => setShowNotifications(false)} height="70vh">
+          <div className="px-5 pt-1 pb-4">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-slate-800">Notifications</h2>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-primary text-sm font-semibold btn-press"
+              >
+                Mark all read
+              </button>
             </div>
-            <div className="overflow-y-auto space-y-3">
-              {notifications.map(n => (
-                <div key={n.id} className="p-3 bg-gray-50 rounded-lg flex items-start">
-                  <div className="p-2 bg-blue-100 text-blue-600 rounded-full mr-3 mt-1">
-                    <Bell className="w-4 h-4" />
+            <div className="space-y-3">
+              {notifications.map(n => {
+                const Icon = n.icon
+                const colorMap: Record<string, string> = {
+                  blue: 'bg-blue-100 text-blue-600',
+                  amber: 'bg-amber-100 text-amber-600',
+                  green: 'bg-emerald-100 text-emerald-600',
+                }
+                return (
+                  <div key={n.id} className="flex items-start gap-3 p-4 bg-slate-50 rounded-2xl">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${colorMap[n.color]}`}>
+                      <Icon size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-slate-800">{n.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{n.body}</p>
+                      <p className="text-[10px] text-slate-400 mt-1.5 font-medium">{n.time}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-sm">{n.title}</h4>
-                    <p className="text-xs text-gray-600 mt-1">{n.body}</p>
-                    <span className="text-[10px] text-gray-400 mt-2 block">{n.time}</span>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
-        </div>
+        </ModalSheet>
       )}
     </div>
-  );
-};
+  )
+}

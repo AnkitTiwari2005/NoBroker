@@ -136,7 +136,7 @@ export default function PostPropertyPage() {
         <div className="bg-primary transition-all duration-300 h-full" style={{ width: `${(step / 3) * 100}%` }} />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-5 pb-24">
+      <div className="p-5 pb-28">
         {step === 1 && (
           <div className="animate-fade-in space-y-8">
             <div>

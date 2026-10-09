@@ -9,7 +9,7 @@ export default function FavoritesPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="h-full bg-slate-50 flex flex-col page-enter overflow-hidden">
+    <div className="min-h-screen bg-slate-50 page-enter">
       <div className="bg-white border-b shadow-sm z-10" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="flex items-center px-4 py-3">
           <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-slate-700 btn-press rounded-full active:bg-slate-100">
@@ -25,7 +25,7 @@ export default function FavoritesPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+      <div className="px-4 py-4 pb-28">
         {favorites.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center mt-12">
             <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mb-6">

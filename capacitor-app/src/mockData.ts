@@ -658,7 +658,7 @@ export const CITIES = [
   { name: 'Bangalore', count: 1842, image: 'https://images.unsplash.com/photo-1596176530529-78163a4f7af2?w=400&auto=format&fit=crop' },
   { name: 'Mumbai',    count: 2341, image: 'https://images.unsplash.com/photo-1567157577867-05ccb1388e66?w=400&auto=format&fit=crop' },
   { name: 'Delhi',     count: 1965, image: 'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=400&auto=format&fit=crop' },
-  { name: 'Hyderabad', count: 1234, image: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&auto=format&fit=crop' },
+  { name: 'Hyderabad', count: 1234, image: 'https://images.unsplash.com/photo-1563448927483-5f84e5ff9b60?w=400&auto=format&fit=crop' },
   { name: 'Chennai',   count:  987, image: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400&auto=format&fit=crop' },
   { name: 'Pune',      count:  876, image: 'https://images.unsplash.com/photo-1570168007204-dfb528c6958f?w=400&auto=format&fit=crop' },
 ]

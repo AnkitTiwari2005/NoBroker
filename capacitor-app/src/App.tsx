@@ -94,8 +94,10 @@ function AppShell() {
           className="flex flex-col"
           style={{ height: '100dvh', overflow: 'hidden' }}
         >
-          {/* Page content area */}
-          <div className="flex-1 overflow-hidden">
+          {/* Page content area — overflow-y-auto allows pages to scroll */}
+          <div
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
             <Routes>
               <Route path="/"               element={<HomePage />} />
               <Route path="/search"         element={<SearchPage />} />

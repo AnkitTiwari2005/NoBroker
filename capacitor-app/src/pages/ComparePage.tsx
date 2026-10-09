@@ -80,7 +80,7 @@ export default function ComparePage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-x-auto p-4 pb-24">
+      <div className="w-full overflow-x-auto p-4 pb-28">
         <div className="flex gap-4 min-w-max">
           {/* Label Column */}
           <div className="w-24 shrink-0 pt-36 pb-4 bg-slate-50 sticky left-0 z-10 border-r border-slate-200/50">
