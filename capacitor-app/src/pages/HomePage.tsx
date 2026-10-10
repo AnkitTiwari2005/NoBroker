@@ -98,17 +98,12 @@ export default function HomePage() {
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="px-4 pt-4 pb-2 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo-icon.png"
-              alt="NoBroker"
-              className="w-9 h-9 object-contain"
-            />
+          <div className="flex items-center">
             <img
               src="/logo-text.png"
               alt="NoBroker"
-              className="h-7 object-contain"
-              style={{ filter: 'brightness(10)' }}
+              className="h-8 object-contain"
+              style={{ filter: 'brightness(0) invert(1)' }}
             />
           </div>
           <button
