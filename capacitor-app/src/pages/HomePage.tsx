@@ -98,9 +98,18 @@ export default function HomePage() {
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="px-4 pt-4 pb-2 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">NoBroker</h1>
-            <p className="text-white/60 text-xs mt-0.5">Zero Brokerage • Real Homes</p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo-icon.png"
+              alt="NoBroker"
+              className="w-9 h-9 object-contain"
+            />
+            <img
+              src="/logo-text.png"
+              alt="NoBroker"
+              className="h-7 object-contain"
+              style={{ filter: 'brightness(10)' }}
+            />
           </div>
           <button
             onClick={() => setShowNotifications(true)}
