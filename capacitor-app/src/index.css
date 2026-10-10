@@ -28,12 +28,22 @@
   }
   * {
     -webkit-tap-highlight-color: transparent;
+    /* Disable text selection — native app feel */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    /* Disable long-press callout (image save, link preview) on iOS/WebView */
     -webkit-touch-callout: none;
     box-sizing: border-box;
   }
-  input, textarea, select {
+
+  /* Re-enable selection only for actual text inputs */
+  input, textarea, [contenteditable="true"] {
     -webkit-user-select: text;
+    -moz-user-select: text;
     user-select: text;
+    -webkit-touch-callout: default;
   }
 }
 

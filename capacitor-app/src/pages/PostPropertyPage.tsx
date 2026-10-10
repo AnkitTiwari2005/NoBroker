@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { useToast } from '../ToastContext';
@@ -287,17 +288,23 @@ export default function PostPropertyPage() {
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-200" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
-        {step < 3 ? (
-          <button onClick={nextStep} className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-lg btn-press">
-            Continue
-          </button>
-        ) : (
-          <button onClick={() => setSubmitted(true)} className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-lg btn-press shadow-[0_4px_14px_rgba(16,185,129,0.39)]">
-            Submit Listing
-          </button>
-        )}
-      </div>
+      {ReactDOM.createPortal(
+        <div
+          className="fixed left-0 right-0 px-4 bg-white border-t border-slate-100 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+          style={{ bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)', pointerEvents: 'auto' }}
+        >
+          {step < 3 ? (
+            <button onClick={nextStep} className="w-full py-3.5 bg-primary text-white rounded-xl font-bold text-lg btn-press">
+              Continue →
+            </button>
+          ) : (
+            <button onClick={() => setSubmitted(true)} className="w-full py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-lg btn-press shadow-[0_4px_14px_rgba(16,185,129,0.39)]">
+              Submit Listing
+            </button>
+          )}
+        </div>,
+        document.getElementById('modal-root')!
+      )}
     </div>
   );
 }

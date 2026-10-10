@@ -33,7 +33,7 @@ const VALID_CREDENTIALS: Record<string, { password: string; user: User }> = {
       isVerified: false,
     },
   },
-  'shivskukreja@gmail.com': { password: 'Admin@NoBroker123', user: ADMIN_USER },
+  'shivskukreja@gmail.com': { password: 'Admin@NoBroker1234', user: ADMIN_USER },
 }
 
 export interface RegisterData {

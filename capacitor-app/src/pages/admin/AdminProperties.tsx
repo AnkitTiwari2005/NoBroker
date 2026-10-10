@@ -1,112 +1,215 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AdminLayout from './AdminLayout';
 import { MOCK_PROPERTIES } from '../../mockData';
 import { useToast } from '../../ToastContext';
-import { Search, CheckCircle2, XCircle, Star, Tag } from 'lucide-react';
-import { Property } from '../../types';
+import {
+  Search, SlidersHorizontal, CheckCircle2, XCircle, Star,
+  Eye, Trash2, Home, MapPin, Bed, Bath, Building2,
+  MoreVertical, ShieldCheck, Clock, BadgeCheck
+} from 'lucide-react';
+import { getDisplayPrice } from '../../utils';
+
+type Status = 'all' | 'published' | 'pending' | 'featured' | 'rejected';
+
+const STATUS_STYLES: Record<string, string> = {
+  published: 'bg-emerald-100 text-emerald-700',
+  featured:  'bg-blue-100 text-blue-700',
+  pending:   'bg-amber-100 text-amber-700',
+  rejected:  'bg-red-100 text-red-700',
+  draft:     'bg-slate-100 text-slate-500',
+  sold:      'bg-purple-100 text-purple-700',
+  rented:    'bg-indigo-100 text-indigo-700',
+};
+
+// Augment mock properties with editable status
+function useProperties() {
+  const initial = MOCK_PROPERTIES.map((p, i) => ({
+    ...p,
+    status: (i === 3 || i === 7 ? 'pending' : (p.status || 'published')) as string,
+    isVerified: p.isVerified || false,
+  }));
+  const [props, setProps] = useState(initial);
+
+  const approve = (id: string)  => setProps(prev => prev.map(p => p.id === id ? { ...p, status: 'published' } : p));
+  const reject  = (id: string)  => setProps(prev => prev.map(p => p.id === id ? { ...p, status: 'rejected'  } : p));
+  const feature = (id: string)  => setProps(prev => prev.map(p => p.id === id ? { ...p, status: 'featured'  } : p));
+  const verify  = (id: string)  => setProps(prev => prev.map(p => p.id === id ? { ...p, isVerified: true    } : p));
+  const remove  = (id: string)  => setProps(prev => prev.filter(p => p.id !== id));
+
+  return { props, approve, reject, feature, verify, remove };
+}
 
 export default function AdminProperties() {
   const { showToast } = useToast();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [properties, setProperties] = useState<Property[]>(MOCK_PROPERTIES);
+  const { props, approve, reject, feature, verify, remove } = useProperties();
 
-  const filteredProperties = properties.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.city.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || p.status.toLowerCase() === statusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
-  });
+  const [query,      setQuery]      = useState('');
+  const [statusFilter, setStatusFilter] = useState<Status>('all');
+  const [menuOpen,   setMenuOpen]   = useState<string | null>(null);
 
-  const updateStatus = (id: string, status: Property['status']) => {
-    setProperties(properties.map(p => p.id === id ? { ...p, status } : p));
-    showToast(`Property marked as ${status}`);
-  };
+  const filtered = useMemo(() => {
+    return props.filter(p => {
+      const matchQ = !query || p.title.toLowerCase().includes(query.toLowerCase()) ||
+        p.city.toLowerCase().includes(query.toLowerCase()) ||
+        p.locality.toLowerCase().includes(query.toLowerCase());
+      const matchS = statusFilter === 'all' || p.status === statusFilter;
+      return matchQ && matchS;
+    });
+  }, [props, query, statusFilter]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'featured': return 'bg-blue-100 text-blue-800';
-      case 'sold': return 'bg-purple-100 text-purple-800';
-      case 'rented': return 'bg-indigo-100 text-indigo-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const statusTabs: { key: Status; label: string }[] = [
+    { key: 'all',       label: 'All' },
+    { key: 'pending',   label: 'Pending' },
+    { key: 'published', label: 'Live' },
+    { key: 'featured',  label: 'Featured' },
+    { key: 'rejected',  label: 'Rejected' },
+  ];
+
+  const handleAction = (action: string, id: string) => {
+    setMenuOpen(null);
+    switch (action) {
+      case 'approve': approve(id); showToast('✓ Property published'); break;
+      case 'reject':  reject(id);  showToast('Property rejected'); break;
+      case 'feature': feature(id); showToast('★ Featured! Property promoted'); break;
+      case 'verify':  verify(id);  showToast('✓ Property verified'); break;
+      case 'delete':  remove(id);  showToast('Property deleted'); break;
     }
   };
 
   return (
     <AdminLayout>
-      <div className="p-4 page-enter">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Properties</h2>
-        
-        <div className="bg-white p-3 rounded-lg shadow-sm mb-4 border border-gray-200">
-          <div className="relative mb-3">
-            <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Search by title or city..." 
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-[#1E3A5F]"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex overflow-x-auto space-x-2 pb-1 scrollbar-hide">
-            {['All', 'Published', 'Pending', 'Featured', 'Sold', 'Rented', 'Rejected'].map(status => (
-              <button 
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap btn-press ${statusFilter === status ? 'bg-[#1E3A5F] text-white' : 'bg-gray-100 text-gray-600'}`}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
+      <div className="p-4 space-y-4 page-enter">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-black text-slate-800">Properties</h1>
+          <span className="text-sm text-slate-400 font-medium">{filtered.length} listings</span>
         </div>
 
-        <div className="space-y-4">
-          {filteredProperties.map(property => (
-            <div key={property.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-200 flex flex-col">
-              <div className="flex mb-3">
-                <img src={property.coverImageUrl || property.images?.[0]?.url || 'https://images.unsplash.com/photo-1560518884-ce5882228f44?auto=format&fit=crop&w=200&q=80'} alt={property.title} className="w-20 h-20 rounded-lg object-cover mr-3" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm line-clamp-2">{property.title}</h3>
-                  <p className="text-xs text-gray-500 mt-1">{property.city} • {property.propertyType}</p>
-                  <div className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mt-2 uppercase ${getStatusColor(property.status)}`}>
-                    {property.status}
+        {/* Search */}
+        <div className="relative">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by title, city, locality..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
+          />
+        </div>
+
+        {/* Status filter tabs */}
+        <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
+          {statusTabs.map(tab => {
+            const count = tab.key === 'all' ? props.length : props.filter(p => p.status === tab.key).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors btn-press ${
+                  statusFilter === tab.key
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-white text-slate-500 border-slate-200'
+                }`}
+              >
+                {tab.label} {count > 0 && <span className="opacity-60">({count})</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Properties list */}
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center">
+            <Building2 size={40} className="mx-auto mb-3 text-slate-200" />
+            <p className="font-bold text-slate-500">No properties found</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map(prop => (
+              <div key={prop.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="flex gap-3 p-3">
+                  {/* Thumbnail */}
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0">
+                    {(prop.images?.[0]?.url || prop.coverImageUrl) ? (
+                      <img src={prop.images?.[0]?.url || prop.coverImageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Home size={24} className="text-slate-200" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-bold text-slate-800 text-sm leading-snug line-clamp-2 flex-1">{prop.title}</h3>
+                      <button
+                        onClick={() => setMenuOpen(menuOpen === prop.id ? null : prop.id)}
+                        className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 btn-press"
+                      >
+                        <MoreVertical size={14} className="text-slate-500" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <MapPin size={11} className="text-slate-400 shrink-0" />
+                      <span className="text-xs text-slate-400 truncate">{prop.locality}, {prop.city}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${STATUS_STYLES[prop.status] || 'bg-slate-100 text-slate-500'}`}>
+                        {prop.status}
+                      </span>
+                      {prop.isVerified && (
+                        <span className="flex items-center gap-0.5 text-[10px] font-bold text-emerald-600">
+                          <ShieldCheck size={10} /> Verified
+                        </span>
+                      )}
+                      <span className="text-xs font-bold text-primary ml-auto">
+                        {getDisplayPrice(prop as any)}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">By {prop.owner?.name || 'Unknown'} • {prop.bedrooms > 0 ? `${prop.bedrooms} BHK` : prop.propertyType}</p>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex border-t pt-3 justify-between">
-                {property.status === 'pending' ? (
-                  <>
-                    <button onClick={() => updateStatus(property.id, 'published')} className="flex items-center text-xs font-medium text-green-600 bg-green-50 px-3 py-1.5 rounded-lg btn-press">
-                      <CheckCircle2 className="w-4 h-4 mr-1" /> Approve
+
+                {/* Action dropdown */}
+                {menuOpen === prop.id && (
+                  <div className="border-t border-slate-50 bg-slate-50 p-2 flex flex-wrap gap-2">
+                    {prop.status === 'pending' && (
+                      <>
+                        <button onClick={() => handleAction('approve', prop.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-xl btn-press">
+                          <CheckCircle2 size={13} /> Approve
+                        </button>
+                        <button onClick={() => handleAction('reject', prop.id)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-xl btn-press">
+                          <XCircle size={13} /> Reject
+                        </button>
+                      </>
+                    )}
+                    {prop.status === 'published' && (
+                      <button onClick={() => handleAction('feature', prop.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white text-xs font-bold rounded-xl btn-press">
+                        <Star size={13} /> Feature
+                      </button>
+                    )}
+                    {!prop.isVerified && (
+                      <button onClick={() => handleAction('verify', prop.id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-xl btn-press">
+                        <BadgeCheck size={13} /> Verify
+                      </button>
+                    )}
+                    <button onClick={() => handleAction('delete', prop.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 text-xs font-bold rounded-xl btn-press border border-red-100">
+                      <Trash2 size={13} /> Delete
                     </button>
-                    <button onClick={() => updateStatus(property.id, 'rejected')} className="flex items-center text-xs font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-lg btn-press">
-                      <XCircle className="w-4 h-4 mr-1" /> Reject
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => updateStatus(property.id, 'featured')} className="flex items-center text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg btn-press">
-                      <Star className="w-4 h-4 mr-1" /> Feature
-                    </button>
-                    <button onClick={() => updateStatus(property.id, property.listingType === 'buy' ? 'sold' : 'rented')} className="flex items-center text-xs font-medium text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg btn-press">
-                      <Tag className="w-4 h-4 mr-1" /> Mark {property.listingType === 'buy' ? 'Sold' : 'Rented'}
-                    </button>
-                  </>
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
-          {filteredProperties.length === 0 && (
-            <div className="text-center py-10 text-gray-500">
-              No properties found matching your criteria.
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
-};
+}

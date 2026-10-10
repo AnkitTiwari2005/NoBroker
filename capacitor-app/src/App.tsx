@@ -19,6 +19,7 @@ import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminProperties from './pages/admin/AdminProperties'
 import AdminUsers from './pages/admin/AdminUsers'
+import AdminLeads from './pages/admin/AdminLeads'
 
 // ─── App Phase Control ────────────────────────────────────────────────────────
 type Phase = 'splash' | 'onboarding' | 'app'
@@ -66,15 +67,10 @@ function AppShell() {
   if (user?.role === 'admin') {
     return (
       <Routes>
-        <Route path="/admin/*" element={
-          <AdminLayout>
-            <Routes>
-              <Route path="/" element={<AdminDashboard />} />
-              <Route path="properties" element={<AdminProperties />} />
-              <Route path="users" element={<AdminUsers />} />
-            </Routes>
-          </AdminLayout>
-        } />
+        <Route path="/admin"            element={<AdminDashboard />} />
+        <Route path="/admin/properties" element={<AdminProperties />} />
+        <Route path="/admin/users"      element={<AdminUsers />} />
+        <Route path="/admin/leads"      element={<AdminLeads />} />
         {/* Redirect everything else to admin */}
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

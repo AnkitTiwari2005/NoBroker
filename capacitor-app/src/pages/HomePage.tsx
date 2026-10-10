@@ -19,6 +19,16 @@ export default function HomePage() {
   const [showNotifications, setShowNotifications] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
+  // Filter all property lists by active listing type
+  const filteredFeatured = useMemo(
+    () => FEATURED_PROPERTIES.filter(p => p.listingType === listingType),
+    [listingType]
+  )
+  const filteredLatest = useMemo(
+    () => MOCK_PROPERTIES.filter(p => p.listingType === listingType).slice(0, 4),
+    [listingType]
+  )
+
   // Mock notifications
   const notifications = [
     { id: 1, icon: TrendingUp, color: 'blue',  title: 'New property match',   body: 'A new 2 BHK in Indiranagar matches your search.',    time: '2 hours ago' },
@@ -212,18 +222,27 @@ export default function HomePage() {
       {/* ── Featured Properties ──────────────────────────────────────────── */}
       <div className="mb-8 pl-4">
         <div className="flex justify-between items-center pr-4 mb-4">
-          <h2 className="text-lg font-bold text-slate-800">Featured Properties</h2>
-          <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary btn-press flex items-center gap-1">
+          <h2 className="text-lg font-bold text-slate-800">
+            Featured {listingType === 'rent' ? 'Rentals' : 'Properties for Sale'}
+          </h2>
+          <button onClick={() => navigate(`/search?listingType=${listingType}`)} className="text-sm font-semibold text-primary btn-press flex items-center gap-1">
             View All <ChevronRight size={16} />
           </button>
         </div>
-        <div className="flex overflow-x-auto gap-4 pb-2 pr-4 scrollbar-hide">
-          {FEATURED_PROPERTIES.map(prop => (
-            <div key={prop.id} className="w-72 shrink-0 card-press">
-              <PropertyCard property={prop} compact />
-            </div>
-          ))}
-        </div>
+        {filteredFeatured.length > 0 ? (
+          <div className="flex overflow-x-auto gap-4 pb-2 pr-4 scrollbar-hide">
+            {filteredFeatured.map(prop => (
+              <div key={prop.id} className="w-72 shrink-0 card-press">
+                <PropertyCard property={prop} compact />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mr-4 py-8 bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-slate-400">
+            <Building2 size={32} className="mb-2 opacity-30" />
+            <p className="text-sm">No featured {listingType === 'rent' ? 'rentals' : 'sale'} listings</p>
+          </div>
+        )}
       </div>
 
       {/* ── Browse by City ───────────────────────────────────────────────── */}
@@ -280,18 +299,27 @@ export default function HomePage() {
       {/* ── Latest Properties ────────────────────────────────────────────── */}
       <div className="px-4 mb-4">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-slate-800">Latest Properties</h2>
-          <button onClick={() => navigate('/search')} className="text-sm font-semibold text-primary btn-press flex items-center gap-1">
+          <h2 className="text-lg font-bold text-slate-800">
+            Latest {listingType === 'rent' ? 'Rentals' : 'For Sale'}
+          </h2>
+          <button onClick={() => navigate(`/search?listingType=${listingType}`)} className="text-sm font-semibold text-primary btn-press flex items-center gap-1">
             View All <ChevronRight size={16} />
           </button>
         </div>
-        <div className="space-y-4">
-          {MOCK_PROPERTIES.slice(0, 4).map(prop => (
-            <div key={prop.id} className="card-press">
-              <PropertyCard property={prop} />
+        {filteredLatest.length > 0 ? (
+          <div className="space-y-4">
+            {filteredLatest.map(prop => (
+              <div key={prop.id} className="card-press">
+                <PropertyCard property={prop} />
             </div>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="py-8 bg-white rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-slate-400">
+            <Building2 size={32} className="mb-2 opacity-30" />
+            <p className="text-sm">No {listingType === 'rent' ? 'rental' : 'sale'} listings right now</p>
+          </div>
+        )}
       </div>
 
       {/* ── Notifications Sheet (portal) ─────────────────────────────────── */}

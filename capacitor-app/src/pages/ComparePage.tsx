@@ -85,7 +85,7 @@ export default function ComparePage() {
           {/* Label Column */}
           <div className="w-24 shrink-0 pt-36 pb-4 bg-slate-50 sticky left-0 z-10 border-r border-slate-200/50">
             {specs.map((spec, idx) => (
-              <div key={idx} className="h-14 flex items-center text-xs font-bold text-slate-500 px-2">
+              <div key={idx} className="h-14 flex items-center text-xs font-bold text-slate-500 pl-0 pr-1">
                 {spec.label}
               </div>
             ))}

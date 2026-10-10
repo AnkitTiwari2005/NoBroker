@@ -22,6 +22,8 @@ export default function AccountPage() {
   const [showHelpSheet,     setShowHelpSheet]     = useState(false);
   const [showPasswordSheet, setShowPasswordSheet] = useState(false);
   const [showNotifSheet,    setShowNotifSheet]    = useState(false);
+  const [showTermsSheet,    setShowTermsSheet]    = useState(false);
+  const [showPrivacySheet,  setShowPrivacySheet]  = useState(false);
 
   const [editName,    setEditName]    = useState(user?.name  || '');
   const [editPhone,   setEditPhone]   = useState(user?.phone || '');
@@ -182,8 +184,8 @@ export default function AccountPage() {
           <MenuItem icon={HelpCircle}   label="Help & Support"   onClick={() => setShowHelpSheet(true)} />
           <MenuItem icon={MessageSquare} label="Contact Us"      onClick={() => showToast('Email: support@nobroker.in', 'info')} />
           <MenuItem icon={Share2}       label="Share App"        onClick={() => { navigator.share?.({ title: 'NoBroker', text: 'Find homes without brokerage!', url: 'https://nobroker.in' }).catch(() => showToast('Link copied!')) }} />
-          <MenuItem icon={FileText}     label="Terms of Service" onClick={() => showToast('Visit nobroker.in/terms', 'info')} />
-          <MenuItem icon={Shield}       label="Privacy Policy"   onClick={() => showToast('Visit nobroker.in/privacy', 'info')} />
+          <MenuItem icon={FileText}      label="Terms of Service" onClick={() => setShowTermsSheet(true)} />
+          <MenuItem icon={Shield}        label="Privacy Policy"   onClick={() => setShowPrivacySheet(true)} />
         </MenuSection>
 
         {/* Logout */}
@@ -318,6 +320,50 @@ export default function AccountPage() {
               <p className="text-sm font-bold text-primary mb-1">Still need help?</p>
               <p className="text-xs text-slate-500">Email us at <span className="text-primary font-semibold">support@nobroker.in</span> or call <span className="text-primary font-semibold">1800-102-1345</span></p>
             </div>
+          </div>
+        </ModalSheet>
+      )}
+
+      {/* Terms of Service Sheet */}
+      {showTermsSheet && (
+        <ModalSheet onClose={() => setShowTermsSheet(false)} title="Terms of Service" showClose height="88vh">
+          <div className="px-5 pb-6 space-y-4 text-sm text-slate-600 leading-relaxed">
+            <p className="text-xs text-slate-400 font-medium">Last updated: January 2025</p>
+            {[
+              { h: 'Acceptance of Terms', b: 'By using NoBroker, you agree to these Terms. NoBroker is a zero-brokerage property platform connecting owners directly with seekers.' },
+              { h: 'Zero Brokerage Promise', b: 'NoBroker charges zero brokerage to buyers, renters, or property owners. Our platform is completely free to use.' },
+              { h: 'User Responsibilities', b: 'You agree to provide accurate information. Property owners must ensure all listings are genuine. Fake listings will result in account termination.' },
+              { h: 'Listing Verification', b: 'All listings are reviewed by our admin team before being published. We reserve the right to reject any listing that violates guidelines.' },
+              { h: 'Privacy & Data', b: 'Your contact information is only shared when you initiate contact with an owner. We do not sell your data to third parties.' },
+              { h: 'Limitation of Liability', b: 'NoBroker acts as a facilitator. We are not responsible for disputes arising from property transactions.' },
+            ].map((s, i) => (
+              <div key={i} className="pb-3 border-b border-slate-50 last:border-0">
+                <h4 className="font-bold text-slate-800 mb-1">{i + 1}. {s.h}</h4>
+                <p>{s.b}</p>
+              </div>
+            ))}
+          </div>
+        </ModalSheet>
+      )}
+
+      {/* Privacy Policy Sheet */}
+      {showPrivacySheet && (
+        <ModalSheet onClose={() => setShowPrivacySheet(false)} title="Privacy Policy" showClose height="88vh">
+          <div className="px-5 pb-6 space-y-4 text-sm text-slate-600 leading-relaxed">
+            <p className="text-xs text-slate-400 font-medium">Last updated: January 2025</p>
+            {[
+              { h: 'Information We Collect', b: 'We collect your name, email, phone number, and property preferences to provide you the best experience.' },
+              { h: 'How We Use Your Data', b: 'Your data is used to match you with relevant properties, send notifications, and improve recommendations.' },
+              { h: 'Data Sharing', b: 'We only share your contact details with owners when you explicitly choose to contact them. We never sell data to advertisers.' },
+              { h: 'Data Security', b: 'All data is encrypted in transit and at rest. We use industry-standard security to protect your information.' },
+              { h: 'Your Rights', b: 'You can request deletion of your account at any time. Data is deleted within 30 days of your request.' },
+              { h: 'Contact', b: 'For privacy-related queries, email us at privacy@nobroker.in or call 1800-102-1345.' },
+            ].map((s, i) => (
+              <div key={i} className="pb-3 border-b border-slate-50 last:border-0">
+                <h4 className="font-bold text-slate-800 mb-1">{i + 1}. {s.h}</h4>
+                <p>{s.b}</p>
+              </div>
+            ))}
           </div>
         </ModalSheet>
       )}
