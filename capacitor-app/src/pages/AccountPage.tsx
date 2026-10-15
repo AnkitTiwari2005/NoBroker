@@ -10,6 +10,7 @@ import { useAuth } from '../AuthContext';
 import { useFavorites, useCompare } from '../AppContext';
 import { useToast } from '../ToastContext';
 import ModalSheet from '../components/ModalSheet';
+import { MOCK_PROPERTIES } from '../mockData';
 
 export default function AccountPage() {
   const { user, logout, updateProfile } = useAuth();
@@ -166,9 +167,9 @@ export default function AccountPage() {
           <MenuItem icon={Heart}     label="Saved Properties"    badge={favorites.length > 0 ? String(favorites.length) : undefined} onClick={() => navigate('/favorites')} />
           <MenuItem icon={Scale}     label="Compare Properties"  badge={compareList.length > 0 ? String(compareList.length) : undefined} onClick={() => navigate('/compare')} />
           {user.role === 'owner' && (
-            <MenuItem icon={Building2} label="My Listings" badge="2" onClick={() => navigate('/post')} />
+            <MenuItem icon={Building2} label="My Listings" badge={String(MOCK_PROPERTIES.filter(p => p.owner?.id === user.id || p.owner?.name === user.name).length || 0) !== '0' ? String(MOCK_PROPERTIES.filter(p => p.owner?.id === user.id || p.owner?.name === user.name).length) : undefined} onClick={() => navigate('/my-listings')} />
           )}
-          <MenuItem icon={Star}      label="Recently Viewed"     onClick={() => showToast('Recently viewed properties coming soon', 'info')} />
+          <MenuItem icon={Star}      label="Recently Viewed"     onClick={() => navigate('/recently-viewed')} />
         </MenuSection>
 
         {/* Account Settings */}

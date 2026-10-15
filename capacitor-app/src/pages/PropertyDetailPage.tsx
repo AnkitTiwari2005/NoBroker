@@ -9,7 +9,7 @@ import {
 import { MOCK_PROPERTIES } from '../mockData';
 import { getDisplayPrice, formatArea, formatPropertyType, formatFurnishing, timeAgo } from '../utils';
 import { useToast } from '../ToastContext';
-import { useFavorites, useCompare } from '../AppContext';
+import { useFavorites, useCompare, useRecentlyViewed } from '../AppContext';
 import ModalSheet from '../components/ModalSheet';
 
 const AMENITY_ICONS: Record<string, any> = {
@@ -24,6 +24,7 @@ export default function PropertyDetailPage() {
   const { showToast } = useToast();
   const { isFavorited, toggleFavorite } = useFavorites();
   const { addToCompare } = useCompare();
+  const { addRecentlyViewed } = useRecentlyViewed();
 
   const property = MOCK_PROPERTIES.find(p => p.id === id);
 
@@ -33,6 +34,7 @@ export default function PropertyDetailPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (property) addRecentlyViewed(property);
   }, [id]);
 
   if (!property) {

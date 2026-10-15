@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth, ONBOARDING_KEY } from './AuthContext'
-import { FavoritesProvider, CompareProvider } from './AppContext'
+import { FavoritesProvider, CompareProvider, RecentlyViewedProvider } from './AppContext'
 import { ToastProvider } from './ToastContext'
 import TabBar from './TabBar'
 import SplashScreen from './pages/SplashScreen'
@@ -15,6 +15,8 @@ import AccountPage from './pages/AccountPage'
 import PostPropertyPage from './pages/PostPropertyPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import MyListingsPage from './pages/MyListingsPage'
+import RecentlyViewedPage from './pages/RecentlyViewedPage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminProperties from './pages/admin/AdminProperties'
@@ -95,13 +97,15 @@ function AppShell() {
             className="flex-1 min-h-0 overflow-y-auto"
           >
             <Routes>
-              <Route path="/"               element={<HomePage />} />
-              <Route path="/search"         element={<SearchPage />} />
-              <Route path="/property/:id"   element={<PropertyDetailPage />} />
-              <Route path="/favorites"      element={<FavoritesPage />} />
-              <Route path="/compare"        element={<ComparePage />} />
-              <Route path="/account"        element={<AccountPage />} />
-              <Route path="/post"           element={<PostPropertyPage />} />
+              <Route path="/"                   element={<HomePage />} />
+              <Route path="/search"             element={<SearchPage />} />
+              <Route path="/property/:id"       element={<PropertyDetailPage />} />
+              <Route path="/favorites"          element={<FavoritesPage />} />
+              <Route path="/compare"            element={<ComparePage />} />
+              <Route path="/account"            element={<AccountPage />} />
+              <Route path="/post"               element={<PostPropertyPage />} />
+              <Route path="/my-listings"        element={<MyListingsPage />} />
+              <Route path="/recently-viewed"    element={<RecentlyViewedPage />} />
             </Routes>
           </div>
           <TabBar />
@@ -117,9 +121,11 @@ export default function App() {
       <AuthProvider>
         <FavoritesProvider>
           <CompareProvider>
-            <ToastProvider>
-              <AppShell />
-            </ToastProvider>
+            <RecentlyViewedProvider>
+              <ToastProvider>
+                <AppShell />
+              </ToastProvider>
+            </RecentlyViewedProvider>
           </CompareProvider>
         </FavoritesProvider>
       </AuthProvider>

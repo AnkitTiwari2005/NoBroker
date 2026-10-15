@@ -46,7 +46,7 @@ export default function PropertyCard({ property, compact = false }: PropertyCard
       <div className="p-3">
         <div className="flex justify-between items-start mb-1">
           <h3 className={`font-bold text-gray-800 line-clamp-1 ${compact ? 'text-sm' : 'text-base'}`}>{property.title}</h3>
-          <span className="font-bold text-[#1E3A5F] whitespace-nowrap ml-2">₹{getDisplayPrice(property)}</span>
+          <span className="font-bold text-[#1E3A5F] whitespace-nowrap ml-2">{getDisplayPrice(property)}</span>
         </div>
         <p className="text-xs text-gray-500 flex items-center mb-3">
           <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />

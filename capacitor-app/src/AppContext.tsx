@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
 import { Property } from './types'
 
 // ─── Favorites ────────────────────────────────────────────────────────────────
@@ -18,10 +18,20 @@ interface CompareContextType {
   isInCompare: (id: string) => boolean
 }
 
-export const FavoritesContext = createContext<FavoritesContextType | null>(null)
-export const CompareContext    = createContext<CompareContextType | null>(null)
+// ─── Recently Viewed ──────────────────────────────────────────────────────────
+interface RecentlyViewedContextType {
+  recentlyViewed: Property[]
+  addRecentlyViewed: (property: Property) => void
+  clearRecentlyViewed: () => void
+}
 
-const FAVS_KEY = 'nobroker_favorites'
+export const FavoritesContext      = createContext<FavoritesContextType | null>(null)
+export const CompareContext        = createContext<CompareContextType | null>(null)
+export const RecentlyViewedContext = createContext<RecentlyViewedContextType | null>(null)
+
+const FAVS_KEY    = 'nobroker_favorites'
+const RECENT_KEY  = 'nobroker_recently_viewed'
+const MAX_RECENT  = 10
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [favorites, setFavorites] = useState<Property[]>(() => {
@@ -70,6 +80,33 @@ export function CompareProvider({ children }: { children: ReactNode }) {
   )
 }
 
+export function RecentlyViewedProvider({ children }: { children: ReactNode }) {
+  const [recentlyViewed, setRecentlyViewed] = useState<Property[]>(() => {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') } catch { return [] }
+  })
+
+  const addRecentlyViewed = useCallback((property: Property) => {
+    setRecentlyViewed(prev => {
+      // Remove if already exists, then prepend
+      const filtered = prev.filter(p => p.id !== property.id)
+      const updated  = [property, ...filtered].slice(0, MAX_RECENT)
+      localStorage.setItem(RECENT_KEY, JSON.stringify(updated))
+      return updated
+    })
+  }, [])
+
+  const clearRecentlyViewed = useCallback(() => {
+    localStorage.removeItem(RECENT_KEY)
+    setRecentlyViewed([])
+  }, [])
+
+  return (
+    <RecentlyViewedContext.Provider value={{ recentlyViewed, addRecentlyViewed, clearRecentlyViewed }}>
+      {children}
+    </RecentlyViewedContext.Provider>
+  )
+}
+
 export function useFavorites() {
   const ctx = useContext(FavoritesContext)
   if (!ctx) throw new Error('useFavorites must be used within FavoritesProvider')
@@ -79,5 +116,11 @@ export function useFavorites() {
 export function useCompare() {
   const ctx = useContext(CompareContext)
   if (!ctx) throw new Error('useCompare must be used within CompareProvider')
+  return ctx
+}
+
+export function useRecentlyViewed() {
+  const ctx = useContext(RecentlyViewedContext)
+  if (!ctx) throw new Error('useRecentlyViewed must be used within RecentlyViewedProvider')
   return ctx
 }
