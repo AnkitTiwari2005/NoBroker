@@ -1,8 +1,7 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Clock, Trash2, ChevronRight, Eye } from 'lucide-react'
+import { ArrowLeft, Clock, Trash2, Eye } from 'lucide-react'
 import { useRecentlyViewed } from '../AppContext'
-import { getDisplayPrice } from '../utils'
 import PropertyCard from '../components/PropertyCard'
 
 export default function RecentlyViewedPage() {

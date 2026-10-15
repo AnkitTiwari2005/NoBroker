@@ -18,8 +18,18 @@ export default function TabBar() {
   const { favorites } = useFavorites()
   const { user } = useAuth()
 
+  // Sub-pages that belong to the Account tab
+  const ACCOUNT_SUBPAGES = ['/my-listings', '/recently-viewed']
+
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/'
+    // Account tab highlights for account sub-pages too
+    if (path === '/account') {
+      return location.pathname.startsWith('/account') ||
+             ACCOUNT_SUBPAGES.some(p => location.pathname.startsWith(p))
+    }
+    // Avoid marking /post active for unrelated paths
+    if (path === '/post') return location.pathname === '/post'
     return location.pathname.startsWith(path)
   }
 
